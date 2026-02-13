@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
+import { projectNameFromRelation } from '@/lib/utils';
 import { redirect } from 'next/navigation';
 import {
   DollarSign,
@@ -321,7 +322,7 @@ export default async function DashboardPage() {
                       </span>
                       <span>
                         <span className="font-medium capitalize">{String(e.type).replace(/_/g, ' ')}</span>
-                        <span className="ml-2 text-muted-foreground">{(e.projects as { name: string } | null)?.name ?? '—'}</span>
+                        <span className="ml-2 text-muted-foreground">{projectNameFromRelation(e.projects)}</span>
                       </span>
                     </span>
                     <span className="tabular-nums">

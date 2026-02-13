@@ -226,13 +226,13 @@ export function AnalyticsView({ data }: { data: AnalyticsData }) {
                         paddingAngle={2}
                         dataKey="value"
                         nameKey="name"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
                       >
                         {projectPieData.map((_, i) => (
                           <Cell key={i} fill={COLORS[i % COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(v: number) => [v, 'Count']} />
+                      <Tooltip formatter={(v: number | undefined) => [v ?? 0, 'Count']} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -271,13 +271,13 @@ export function AnalyticsView({ data }: { data: AnalyticsData }) {
                         paddingAngle={2}
                         dataKey="value"
                         nameKey="name"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
                       >
                         {reqPieData.map((_, i) => (
                           <Cell key={i} fill={COLORS[i % COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(v: number) => [v, 'Count']} />
+                      <Tooltip formatter={(v: number | undefined) => [v ?? 0, 'Count']} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -349,7 +349,7 @@ export function AnalyticsView({ data }: { data: AnalyticsData }) {
                       <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                       <XAxis dataKey="monthLabel" tick={{ fontSize: 12 }} />
                       <YAxis tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 12 }} />
-                      <Tooltip formatter={(v: number) => [formatMoney(v), '']} labelFormatter={(l) => `Month: ${l}`} />
+                      <Tooltip formatter={(v: number | undefined) => [formatMoney(v ?? 0), '']} labelFormatter={(l) => `Month: ${l}`} />
                       <Legend />
                       <Line type="monotone" dataKey="Received" stroke="#22c55e" strokeWidth={2} dot={{ r: 3 }} name="Received" />
                       <Line type="monotone" dataKey="Paid out" stroke="#ef4444" strokeWidth={2} dot={{ r: 3 }} name="Paid out" />
@@ -399,13 +399,13 @@ export function AnalyticsView({ data }: { data: AnalyticsData }) {
                           paddingAngle={2}
                           dataKey="value"
                           nameKey="name"
-                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
                         >
                           {invoicePieData.map((_, i) => (
                             <Cell key={i} fill={COLORS[i % COLORS.length]} />
                           ))}
                         </Pie>
-                        <Tooltip formatter={(v: number) => [v, 'Count']} />
+                        <Tooltip formatter={(v: number | undefined) => [v ?? 0, 'Count']} />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>

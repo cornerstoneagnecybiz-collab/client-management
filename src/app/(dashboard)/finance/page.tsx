@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { FinanceView } from './finance-view';
 import type { InvoiceType, InvoiceStatus } from '@/types';
 import type { VendorPayoutStatus } from '@/types';
+import { projectNameFromRelation, relationNameFromRelation } from '@/lib/utils';
 
 export type InvoiceRow = {
   id: string;
@@ -77,7 +78,7 @@ export default async function FinancePage({
   const invoices: InvoiceRow[] = (invoiceRows ?? []).map((r) => ({
     id: r.id,
     project_id: r.project_id,
-    project_name: (r.projects as { name: string } | null)?.name ?? '—',
+    project_name: projectNameFromRelation(r.projects),
     type: r.type as InvoiceType,
     amount: r.amount,
     status: r.status as InvoiceStatus,
@@ -110,10 +111,12 @@ export default async function FinancePage({
     .order('created_at', { ascending: false });
 
   const vendorPayouts: VendorPayoutRow[] = (payoutRows ?? []).map((r) => {
-    const req = r.requirements as { service_catalog: { service_name: string } | null; projects: { name: string } | null } | null;
-    const serviceName = req?.service_catalog?.service_name ?? '—';
-    const projectName = req?.projects?.name ?? '—';
-    const vendorName = (r.vendors as { name: string } | null)?.name ?? '—';
+    const rawReq = r.requirements as unknown as { service_catalog?: { service_name?: string } | { service_name?: string }[] | null; projects?: unknown } | { service_catalog?: { service_name?: string } | { service_name?: string }[] | null; projects?: unknown }[] | null;
+    const req = rawReq == null ? null : Array.isArray(rawReq) ? rawReq[0] : rawReq;
+    const catalog = req?.service_catalog;
+    const serviceName = (catalog && !Array.isArray(catalog) ? catalog.service_name : (Array.isArray(catalog) ? catalog[0]?.service_name : undefined)) ?? '—';
+    const projectName = projectNameFromRelation(req?.projects);
+    const vendorName = relationNameFromRelation(r.vendors);
     return {
       id: r.id,
       requirement_id: r.requirement_id,
@@ -134,9 +137,11 @@ export default async function FinancePage({
 
   const requirementOptions =
     reqList?.map((r) => {
-      const pName = (r.projects as { name: string; engagement_type?: string } | null)?.name ?? '';
-      const sName = (r.service_catalog as { service_name: string } | null)?.service_name ?? '';
-      const engagementType = (r.projects as { engagement_type?: string } | null)?.engagement_type ?? 'one_time';
+      const pName = projectNameFromRelation(r.projects, '');
+      const catalog = r.service_catalog as unknown as { service_name?: string } | { service_name?: string }[] | null;
+      const sName = (catalog == null ? '' : Array.isArray(catalog) ? catalog[0]?.service_name : catalog?.service_name) ?? '';
+      const proj = r.projects as unknown as { engagement_type?: string } | { engagement_type?: string }[] | null;
+      const engagementType = (Array.isArray(proj) ? proj[0]?.engagement_type : proj?.engagement_type) ?? 'one_time';
       const qtyPeriod =
         engagementType === 'one_time' && (r.quantity != null || r.period_days != null)
           ? ` · ${[r.quantity != null && r.quantity > 0 ? `Qty ${r.quantity}` : null, r.period_days != null && r.period_days > 0 ? `${r.period_days} days` : null].filter(Boolean).join(' × ')}`

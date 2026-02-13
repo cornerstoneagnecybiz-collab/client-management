@@ -62,7 +62,8 @@ export async function getInvoicePrintData(invoiceId: string): Promise<{
     if (reqRows && reqRows.length > 0) {
       const isMonthly = type === 'monthly' || engagementType === 'monthly';
       lineItems = reqRows.map((r) => {
-        const catalog = r.service_catalog as { service_name: string; catalog_type: string } | null;
+        const raw = r.service_catalog as unknown as { service_name?: string; catalog_type?: string } | { service_name?: string; catalog_type?: string }[] | null;
+        const catalog = raw == null ? null : Array.isArray(raw) ? raw[0] : raw;
         const serviceName = catalog?.service_name ?? 'Item';
         const catalogType = (catalog?.catalog_type ?? 'services') as string;
         const amount = r.client_price != null ? Number(r.client_price) : 0;
@@ -293,7 +294,7 @@ export async function updateInvoice(
     await supabase.from('invoice_requirements').delete().eq('invoice_id', id);
   }
 
-  if (updates.status === 'issued' && existing?.status !== 'issued') {
+  if (updates.status === 'issued' && existing && existing.status !== 'issued') {
     const amount = updates.amount !== undefined ? Number(updates.amount) : existing.amount;
     const date = updates.issue_date || existing.issue_date || new Date().toISOString().slice(0, 10);
     await supabase.from('ledger_entries').insert({
@@ -447,7 +448,7 @@ export async function updateVendorPayout(
 
   const newStatus = updates.status ?? existing?.status;
   const newPaidDate = updates.paid_date !== undefined ? updates.paid_date : existing?.paid_date;
-  if (newStatus === 'paid' && newPaidDate && existing?.status !== 'paid') {
+  if (newStatus === 'paid' && newPaidDate && existing && existing.status !== 'paid') {
     const { data: req } = await supabase.from('requirements').select('project_id').eq('id', existing.requirement_id).single();
     if (req?.project_id) {
       const { data: payout } = await supabase.from('vendor_payouts').select('amount').eq('id', id).single();

@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import { LedgerView } from './ledger-view';
 import type { LedgerEntryType } from '@/types';
+import { projectNameFromRelation } from '@/lib/utils';
 
 export interface LedgerEntryRow {
   id: string;
@@ -46,7 +47,7 @@ export default async function LedgerPage({
   const entries: LedgerEntryRow[] = (rows ?? []).map((r) => ({
     id: r.id,
     project_id: r.project_id,
-    project_name: (r.projects as { name: string } | null)?.name ?? '—',
+    project_name: projectNameFromRelation(r.projects),
     type: r.type as LedgerEntryType,
     amount: r.amount,
     date: r.date,

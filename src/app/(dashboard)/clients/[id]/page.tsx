@@ -7,6 +7,7 @@ import { ArrowLeft } from 'lucide-react';
 import type { InvoiceRow, PaymentRow } from '@/app/(dashboard)/finance/page';
 import type { ActivityEntryRow } from '@/app/(dashboard)/activity/page';
 import type { LedgerEntryType } from '@/types';
+import { projectNameFromRelation } from '@/lib/utils';
 
 export default async function ClientDetailPage({
   params,
@@ -55,7 +56,7 @@ export default async function ClientDetailPage({
     clientInvoices = (invRows ?? []).map((r) => ({
       id: r.id,
       project_id: r.project_id,
-      project_name: (r.projects as { name: string } | null)?.name ?? '—',
+      project_name: projectNameFromRelation(r.projects),
       type: r.type as InvoiceRow['type'],
       amount: r.amount,
       status: r.status as InvoiceRow['status'],
@@ -88,7 +89,7 @@ export default async function ClientDetailPage({
     clientActivity = (ledgerRows ?? []).map((r) => ({
       id: r.id,
       project_id: r.project_id,
-      project_name: (r.projects as { name: string } | null)?.name ?? '—',
+      project_name: projectNameFromRelation(r.projects),
       type: r.type as LedgerEntryType,
       amount: r.amount,
       date: r.date,

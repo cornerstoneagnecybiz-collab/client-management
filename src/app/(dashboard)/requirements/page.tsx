@@ -3,6 +3,7 @@ import { RequirementsView } from './requirements-view';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
+import { projectNameFromRelation, relationNameFromRelation } from '@/lib/utils';
 
 export type RequirementRow = {
   id: string;
@@ -83,16 +84,28 @@ export default async function RequirementsPage({
   const requirements: RequirementRow[] = (rows ?? []).map((r) => ({
     id: r.id,
     project_id: r.project_id,
-    project_name: (r.projects as { name: string } | null)?.name ?? '—',
-    engagement_type: (r.projects as { engagement_type?: string } | null)?.engagement_type ?? 'one_time',
+    project_name: projectNameFromRelation(r.projects),
+    engagement_type: ((): RequirementRow['engagement_type'] => {
+      const proj = r.projects as unknown as { engagement_type?: string } | { engagement_type?: string }[] | null;
+      const v = (Array.isArray(proj) ? proj[0]?.engagement_type : proj?.engagement_type) ?? 'one_time';
+      return v === 'monthly' ? 'monthly' : 'one_time';
+    })(),
     service_catalog_id: r.service_catalog_id,
-    service_name: (r.service_catalog as { service_name: string; service_code: string } | null)?.service_name ?? '—',
-    service_code: (r.service_catalog as { service_name: string; service_code: string } | null)?.service_code ?? '',
+    service_name: (() => {
+      const c = r.service_catalog as unknown as { service_name?: string; service_code?: string } | { service_name?: string; service_code?: string }[] | null;
+      const cat = c == null ? null : Array.isArray(c) ? c[0] : c;
+      return cat?.service_name ?? '—';
+    })(),
+    service_code: (() => {
+      const c = r.service_catalog as unknown as { service_name?: string; service_code?: string } | { service_name?: string; service_code?: string }[] | null;
+      const cat = c == null ? null : Array.isArray(c) ? c[0] : c;
+      return cat?.service_code ?? '';
+    })(),
     title: r.title,
     description: r.description,
     delivery: (r.delivery as string) || 'vendor',
     assigned_vendor_id: r.assigned_vendor_id,
-    vendor_name: (r.vendors as { name: string } | null)?.name ?? null,
+    vendor_name: (() => { const n = relationNameFromRelation(r.vendors, ''); return n === '' ? null : n; })(),
     client_price: r.client_price,
     expected_vendor_cost: r.expected_vendor_cost,
     quantity: r.quantity != null ? Number(r.quantity) : null,

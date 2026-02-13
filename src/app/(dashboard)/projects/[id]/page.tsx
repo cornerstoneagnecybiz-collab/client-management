@@ -9,6 +9,7 @@ import type { ProjectStatus } from '@/types';
 import type { InvoiceRow, PaymentRow } from '@/app/(dashboard)/finance/page';
 import type { LedgerEntryRow } from '@/app/(dashboard)/ledger/page';
 import type { ActivityItem } from './project-activity-tab';
+import { projectNameFromRelation, relationNameFromRelation } from '@/lib/utils';
 
 const STATUS_LABELS: Record<ProjectStatus, string> = {
   draft: 'Draft',
@@ -37,7 +38,8 @@ export default async function ProjectDetailPage({
 
   if (error || !project) notFound();
 
-  const client = project.clients as { id: string; name: string } | null;
+  const rawClient = project.clients as unknown as { id?: string; name?: string } | { id?: string; name?: string }[] | null;
+  const client = rawClient == null ? null : Array.isArray(rawClient) ? rawClient[0] : rawClient;
   const clientName = client?.name ?? '—';
 
   const { data: reqRows } = await supabase
@@ -59,13 +61,21 @@ export default async function ProjectDetailPage({
     project_name: project.name,
     engagement_type: engagementType,
     service_catalog_id: r.service_catalog_id,
-    service_name: (r.service_catalog as { service_name: string; service_code: string } | null)?.service_name ?? '—',
-    service_code: (r.service_catalog as { service_name: string; service_code: string } | null)?.service_code ?? '',
+    service_name: (() => {
+      const c = r.service_catalog as unknown as { service_name?: string; service_code?: string } | { service_name?: string; service_code?: string }[] | null;
+      const cat = c == null ? null : Array.isArray(c) ? c[0] : c;
+      return cat?.service_name ?? '—';
+    })(),
+    service_code: (() => {
+      const c = r.service_catalog as unknown as { service_name?: string; service_code?: string } | { service_name?: string; service_code?: string }[] | null;
+      const cat = c == null ? null : Array.isArray(c) ? c[0] : c;
+      return cat?.service_code ?? '';
+    })(),
     title: r.title,
     description: r.description,
     delivery: (r.delivery as string) || 'vendor',
     assigned_vendor_id: r.assigned_vendor_id,
-    vendor_name: (r.vendors as { name: string } | null)?.name ?? null,
+    vendor_name: (() => { const n = relationNameFromRelation(r.vendors, ''); return n === '' ? null : n; })(),
     client_price: r.client_price,
     expected_vendor_cost: r.expected_vendor_cost,
     quantity: r.quantity != null ? Number(r.quantity) : null,
@@ -77,7 +87,7 @@ export default async function ProjectDetailPage({
 
   const { data: invRows } = await supabase
     .from('invoices')
-    .select('id, project_id, type, amount, status, issue_date, due_date, created_at')
+    .select('id, project_id, type, amount, status, issue_date, due_date, billing_month, created_at')
     .eq('project_id', id)
     .order('created_at', { ascending: false });
 
@@ -90,6 +100,7 @@ export default async function ProjectDetailPage({
     status: r.status as InvoiceRow['status'],
     issue_date: r.issue_date,
     due_date: r.due_date,
+    billing_month: r.billing_month ?? null,
     created_at: r.created_at,
   }));
 
@@ -116,7 +127,7 @@ export default async function ProjectDetailPage({
   const projectLedgerEntries: LedgerEntryRow[] = (ledgerRows ?? []).map((r) => ({
     id: r.id,
     project_id: r.project_id,
-    project_name: (r.projects as { name: string } | null)?.name ?? project.name,
+    project_name: projectNameFromRelation(r.projects, project.name),
     type: r.type as LedgerEntryRow['type'],
     amount: r.amount,
     date: r.date,

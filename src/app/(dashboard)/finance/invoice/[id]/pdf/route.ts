@@ -42,7 +42,7 @@ export async function GET(
       `INV-${(data.invoice.issue_date ?? '').slice(0, 4)}-${data.invoice.id.slice(0, 6).toUpperCase()}`;
     const filename = `${invoiceNumber}.pdf`;
 
-    return new NextResponse(pdfBytes, {
+    return new NextResponse(Buffer.from(pdfBytes), {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',

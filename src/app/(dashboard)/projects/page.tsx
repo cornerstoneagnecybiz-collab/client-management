@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import type { ProjectStatus } from '@/types';
 import { Plus } from 'lucide-react';
 import { ProjectRow } from './project-row';
+import { relationNameFromRelation } from '@/lib/utils';
 
 export default async function ProjectsPage({
   searchParams,
@@ -37,7 +38,7 @@ export default async function ProjectsPage({
     start_date: p.start_date,
     end_date: p.end_date,
     created_at: p.created_at,
-    client_name: (p.clients as { id: string; name: string } | null)?.name ?? '—',
+    client_name: relationNameFromRelation(p.clients),
   }));
 
   let clientCount: number | null = null;

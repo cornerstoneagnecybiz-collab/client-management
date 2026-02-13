@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { FulfilmentsView } from './fulfilments-view';
 import type { RequirementRow } from '../requirements/page';
+import { projectNameFromRelation, relationNameFromRelation } from '@/lib/utils';
 
 export default async function FulfilmentsPage({
   searchParams,
@@ -25,6 +26,7 @@ export default async function FulfilmentsPage({
       quantity,
       period_days,
       unit_rate,
+      vendor_unit_rate,
       fulfilment_status,
       created_at,
       projects(name, engagement_type),
@@ -46,21 +48,34 @@ export default async function FulfilmentsPage({
   const requirements: RequirementRow[] = (rows ?? []).map((r) => ({
     id: r.id,
     project_id: r.project_id,
-    project_name: (r.projects as { name: string } | null)?.name ?? '—',
-    engagement_type: (r.projects as { engagement_type?: string } | null)?.engagement_type ?? 'one_time',
+    project_name: projectNameFromRelation(r.projects),
+    engagement_type: ((): RequirementRow['engagement_type'] => {
+      const proj = r.projects as unknown as { engagement_type?: string } | { engagement_type?: string }[] | null;
+      const v = (Array.isArray(proj) ? proj[0]?.engagement_type : proj?.engagement_type) ?? 'one_time';
+      return v === 'monthly' ? 'monthly' : 'one_time';
+    })(),
     service_catalog_id: r.service_catalog_id,
-    service_name: (r.service_catalog as { service_name: string; service_code: string } | null)?.service_name ?? '—',
-    service_code: (r.service_catalog as { service_name: string; service_code: string } | null)?.service_code ?? '',
+    service_name: (() => {
+      const c = r.service_catalog as unknown as { service_name?: string; service_code?: string } | { service_name?: string; service_code?: string }[] | null;
+      const cat = c == null ? null : Array.isArray(c) ? c[0] : c;
+      return cat?.service_name ?? '—';
+    })(),
+    service_code: (() => {
+      const c = r.service_catalog as unknown as { service_name?: string; service_code?: string } | { service_name?: string; service_code?: string }[] | null;
+      const cat = c == null ? null : Array.isArray(c) ? c[0] : c;
+      return cat?.service_code ?? '';
+    })(),
     title: r.title,
     description: r.description,
     delivery: (r.delivery as string) || 'vendor',
     assigned_vendor_id: r.assigned_vendor_id,
-    vendor_name: (r.vendors as { name: string } | null)?.name ?? null,
+    vendor_name: (() => { const n = relationNameFromRelation(r.vendors, ''); return n === '' ? null : n; })(),
     client_price: r.client_price,
     expected_vendor_cost: r.expected_vendor_cost,
     quantity: r.quantity != null ? Number(r.quantity) : null,
     period_days: r.period_days != null ? Number(r.period_days) : null,
     unit_rate: r.unit_rate != null ? Number(r.unit_rate) : null,
+    vendor_unit_rate: r.vendor_unit_rate != null ? Number(r.vendor_unit_rate) : null,
     fulfilment_status: r.fulfilment_status,
     created_at: r.created_at,
   }));
