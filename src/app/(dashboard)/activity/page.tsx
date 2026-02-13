@@ -43,16 +43,20 @@ export default async function ActivityPage({
     );
   }
 
-  const entries: ActivityEntryRow[] = (rows ?? []).map((r) => ({
-    id: r.id,
-    project_id: r.project_id,
-    project_name: (r.projects as { name: string } | null)?.name ?? '—',
-    type: r.type as LedgerEntryType,
-    amount: r.amount,
-    date: r.date,
-    reference_id: r.reference_id,
-    created_at: r.created_at,
-  }));
+  const entries: ActivityEntryRow[] = (rows ?? []).map((r) => {
+    const project = r.projects as unknown as { name: string } | { name: string }[] | null;
+    const name = Array.isArray(project) ? project[0]?.name : project?.name;
+    return {
+      id: r.id,
+      project_id: r.project_id,
+      project_name: name ?? '—',
+      type: r.type as LedgerEntryType,
+      amount: r.amount,
+      date: r.date,
+      reference_id: r.reference_id,
+      created_at: r.created_at,
+    };
+  });
 
   const { data: projects } = await supabase.from('projects').select('id, name').order('name');
 
