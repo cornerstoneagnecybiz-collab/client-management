@@ -1,0 +1,41 @@
+# Cornerstone OS — Cursor governance and best practices
+
+## Architecture and structure
+- Respect existing architecture and folder structure.
+- No business logic in controllers; keep them thin (parse input, call services, return response).
+- Services contain business rules and orchestration.
+- Repositories / data layer: only database access and simple queries.
+- Prefer small, incremental changes; ask before large refactors.
+- Do not modify unrelated files when adding a feature.
+
+## Change management
+- Never apply patch fixes; fix root cause.
+- Never add workaround code or stack fixes on broken logic.
+- Identify root cause, fix at architecture level, refactor properly if needed.
+- Correctness over speed.
+
+## Code quality (best practices)
+- Use TypeScript strictly: proper types, avoid `any`, type API boundaries.
+- Clear naming: variables, functions, and files should be self-explanatory.
+- Add comments only for non-obvious logic; keep code readable without comments where possible.
+- Prefer calculated values over stored totals; avoid duplicate financial data.
+- Keep functions small and single-purpose; extract when logic grows.
+- Use existing UI components and design tokens (Tailwind, glass-card, density) for consistency.
+
+## Security
+- Never bypass role-based access or client isolation.
+- Use publishable (public) key for client and RLS-respecting server; use secret key only server-side when bypassing RLS is required.
+- Protect routes: middleware + server-side auth check in dashboard layout.
+- Do not expose secrets or internal keys to the client.
+
+## Financial accuracy (non-negotiable)
+- This system manages real money; prioritize financial accuracy.
+- Planned profit = client price − expected vendor cost (calculated).
+- Actual profit = client received − vendor paid (from ledger).
+- Variance = planned − actual. No stored totals; prefer derived values.
+- Keep profit logic transparent; no hidden calculations.
+
+## Next.js / React
+- Prefer Server Components; use Client Components only when needed (interactivity, browser APIs).
+- Use App Router conventions: loading.tsx, error.tsx, and proper data fetching in layouts/pages.
+- Env: NEXT_PUBLIC_* for client; other vars server-only.

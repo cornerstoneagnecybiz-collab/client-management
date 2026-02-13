@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 222 47% 6%;
+  --foreground: 210 40% 98%;
+  --card: 222 47% 8%;
+  --card-foreground: 210 40% 98%;
+  --muted: 217 33% 17%;
+  --muted-foreground: 215 20% 55%;
+  --border: 217 33% 17%;
+  --ring: 263 70% 50%;
+  --radius: 1rem;
+}
+
+.light {
+  --background: 0 0% 100%;
+  --foreground: 222 47% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 215 16% 47%;
+  --border: 214 32% 91%;
+  --ring: 263 70% 50%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}
+
+/* Glass card */
+.glass-card {
+  @apply rounded-2xl border border-white/10 bg-white/5 shadow-glass backdrop-blur-xl;
+}
+
+/* Density: compact (default), comfortable, spacious */
+.density-compact .content-cell { @apply py-2; }
+.density-comfortable .content-cell { @apply py-3; }
+.density-spacious .content-cell { @apply py-4; }
