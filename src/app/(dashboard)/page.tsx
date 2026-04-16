@@ -7,6 +7,7 @@ import { CashFlowChart } from './dashboard/cash-flow-chart';
 import { OnboardingBanner } from './dashboard/onboarding-banner';
 import { ActionQueue } from './dashboard/action-queue';
 import { PipelinePulse } from './dashboard/pipeline-pulse';
+import { InvoiceAging } from './dashboard/invoice-aging';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,6 +44,9 @@ export default async function DashboardPage() {
         </div>
         <div className="col-span-12 lg:col-span-5">
           <PipelinePulse stages={data.funnel} />
+        </div>
+        <div className="col-span-12 md:col-span-6 lg:col-span-4">
+          <InvoiceAging aging={data.aging} />
         </div>
       </div>
     </div>
