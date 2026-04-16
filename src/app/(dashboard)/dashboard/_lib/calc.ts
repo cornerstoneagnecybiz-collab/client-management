@@ -1,6 +1,6 @@
 // src/app/(dashboard)/dashboard/_lib/calc.ts
-import type { Invoice, LedgerEntry, PaymentReceived, VendorPayout } from '@/types/database';
-import type { AgingBuckets, KpiValue, NextStep, PendingCash, WeekBucket } from './types';
+import type { Invoice, LedgerEntry, PaymentReceived, Project, Requirement, VendorPayout } from '@/types/database';
+import type { AgingBuckets, FunnelStage, KpiValue, NextStep, PendingCash, VariancePortfolio, WeekBucket } from './types';
 
 const DAY_MS = 86_400_000;
 
@@ -233,4 +233,61 @@ export function computeNextStep(counts: {
     description: 'Define scope, assign vendors, and set pricing per project.',
   };
   return null;
+}
+
+export function computePortfolioVariance(
+  projects: Project[],
+  requirements: Requirement[],
+  ledger: LedgerEntry[],
+): VariancePortfolio {
+  const activeIds = new Set(projects.filter((p) => p.status === 'active').map((p) => p.id));
+  if (activeIds.size === 0) return { variancePct: null, favourable: true };
+
+  let planned = 0;
+  for (const r of requirements) {
+    if (!activeIds.has(r.project_id)) continue;
+    if (r.client_price == null || r.expected_vendor_cost == null) continue;
+    planned += r.client_price - r.expected_vendor_cost;
+  }
+  let received = 0;
+  let paid = 0;
+  for (const e of ledger) {
+    if (!activeIds.has(e.project_id)) continue;
+    if (e.type === 'client_payment') received += e.amount;
+    else if (e.type === 'vendor_payment') paid += e.amount;
+  }
+  const actual = received - paid;
+  if (planned === 0) return { variancePct: null, favourable: actual >= 0 };
+  const variancePct = ((actual - planned) / Math.abs(planned)) * 100;
+  return { variancePct, favourable: actual >= planned };
+}
+
+export interface FunnelInput {
+  clients: number;
+  vendors: number;
+  projects: number;
+  requirements: number;
+  openRequirements: number;
+  unpaidInvoices: number;
+  pendingPayouts: number;
+}
+
+export function buildFunnel(input: FunnelInput): FunnelStage[] {
+  const stages: FunnelStage[] = [
+    { step: 1, label: 'Clients',      count: input.clients,          isBottleneck: false, href: '/clients' },
+    { step: 2, label: 'Vendors',      count: input.vendors,          isBottleneck: false, href: '/vendors' },
+    { step: 3, label: 'Projects',     count: input.projects,         isBottleneck: false, href: '/projects' },
+    { step: 4, label: 'Requirements', count: input.requirements,     isBottleneck: false, href: '/requirements' },
+    { step: 5, label: 'Fulfilments',  count: input.openRequirements, isBottleneck: false, href: '/fulfilments' },
+    { step: 6, label: 'Invoicing',    count: input.unpaidInvoices,   isBottleneck: false, href: '/invoicing' },
+    { step: 7, label: 'Settlement',   count: input.pendingPayouts,   isBottleneck: false, href: '/settlement' },
+    { step: 8, label: 'Reports',      count: null,                   isBottleneck: false, href: '/reports' },
+  ];
+  const pendingStages = [stages[4], stages[5], stages[6]];
+  const top = pendingStages.reduce<FunnelStage | null>(
+    (acc, s) => ((s.count ?? 0) > (acc?.count ?? 0) ? s : acc),
+    null,
+  );
+  if (top && (top.count ?? 0) > 0) top.isBottleneck = true;
+  return stages;
 }

@@ -1,7 +1,7 @@
 // src/app/(dashboard)/dashboard/_lib/calc.test.ts
 import { describe, it, expect } from 'vitest';
-import { bucketLedgerByWeek, computeMtd, computeAging, computePendingCash, computeNextStep } from './calc';
-import type { Invoice, LedgerEntry, PaymentReceived, VendorPayout } from '@/types/database';
+import { bucketLedgerByWeek, buildFunnel, computeAging, computeMtd, computeNextStep, computePendingCash, computePortfolioVariance } from './calc';
+import type { Invoice, LedgerEntry, PaymentReceived, Project, Requirement, VendorPayout } from '@/types/database';
 
 function entry(partial: Partial<LedgerEntry>): LedgerEntry {
   return {
@@ -205,5 +205,97 @@ describe('computeNextStep', () => {
   it('returns null once all three tables are non-empty', () => {
     const out = computeNextStep({ clients: 3, projects: 2, requirements: 5 });
     expect(out).toBeNull();
+  });
+});
+
+function proj(p: Partial<Project>): Project {
+  return {
+    id: p.id ?? crypto.randomUUID(),
+    client_id: 'c1',
+    name: p.name ?? 'P',
+    status: p.status ?? 'active',
+    engagement_type: 'one_time',
+    start_date: null,
+    end_date: null,
+    created_at: '2026-01-01',
+    updated_at: '2026-01-01',
+  };
+}
+
+function req(p: Partial<Requirement>): Requirement {
+  return {
+    id: p.id ?? crypto.randomUUID(),
+    project_id: p.project_id ?? 'p1',
+    service_name: 'X',
+    service_category: null,
+    pricing_type: 'fixed',
+    title: 'T',
+    description: null,
+    delivery: 'vendor',
+    assigned_vendor_id: null,
+    client_price: p.client_price ?? 0,
+    expected_vendor_cost: p.expected_vendor_cost ?? 0,
+    quantity: null,
+    period_days: null,
+    unit_rate: null,
+    vendor_unit_rate: null,
+    fulfilment_status: p.fulfilment_status ?? 'pending',
+    created_at: '2026-01-01',
+    updated_at: '2026-01-01',
+  };
+}
+
+describe('computePortfolioVariance', () => {
+  it('returns null variance when no active projects', () => {
+    const out = computePortfolioVariance([], [], []);
+    expect(out.variancePct).toBeNull();
+  });
+
+  it('calculates variance = (actual - planned) / planned * 100 across active projects', () => {
+    const projects = [proj({ id: 'p1', status: 'active' })];
+    const requirements = [
+      req({ project_id: 'p1', client_price: 10000, expected_vendor_cost: 6000 }),
+    ];
+    const ledger: LedgerEntry[] = [
+      entry({ project_id: 'p1', type: 'client_payment', amount: 9000, date: '2026-01-01' }),
+      entry({ project_id: 'p1', type: 'vendor_payment', amount: 6000, date: '2026-01-01' }),
+    ];
+    const out = computePortfolioVariance(projects, requirements, ledger);
+    expect(out.variancePct).toBeCloseTo(-25, 5);
+    expect(out.favourable).toBe(false);
+  });
+});
+
+describe('buildFunnel', () => {
+  it('returns 8 stages with counts in sidebar order', () => {
+    const out = buildFunnel({
+      clients: 3, vendors: 5, projects: 2, requirements: 10,
+      openRequirements: 4, unpaidInvoices: 2, pendingPayouts: 1,
+    });
+    expect(out).toHaveLength(8);
+    expect(out.map((s) => s.label)).toEqual([
+      'Clients', 'Vendors', 'Projects', 'Requirements', 'Fulfilments', 'Invoicing', 'Settlement', 'Reports',
+    ]);
+    expect(out[0].count).toBe(3);
+    expect(out[4].count).toBe(4);
+    expect(out[7].count).toBeNull();
+  });
+
+  it('flags the pending stage with the highest count as bottleneck', () => {
+    const out = buildFunnel({
+      clients: 50, vendors: 30, projects: 20, requirements: 10,
+      openRequirements: 6, unpaidInvoices: 3, pendingPayouts: 1,
+    });
+    const bottleneck = out.find((s) => s.isBottleneck);
+    expect(bottleneck?.label).toBe('Fulfilments');
+    expect(out[0].isBottleneck).toBe(false);
+  });
+
+  it('no bottleneck flag when all pending stages are zero', () => {
+    const out = buildFunnel({
+      clients: 1, vendors: 1, projects: 1, requirements: 1,
+      openRequirements: 0, unpaidInvoices: 0, pendingPayouts: 0,
+    });
+    expect(out.every((s) => !s.isBottleneck)).toBe(true);
   });
 });
