@@ -11,13 +11,11 @@ import {
 } from './calc';
 import type { DashboardData, ActivityItem, CollectItem, FulfilItem, PayItem } from './types';
 import type {
-  Client,
   Invoice,
   LedgerEntry,
   PaymentReceived,
   Project,
   Requirement,
-  Vendor,
   VendorPayout,
 } from '@/types/database';
 
