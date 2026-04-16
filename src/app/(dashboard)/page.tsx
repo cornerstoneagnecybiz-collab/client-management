@@ -10,6 +10,7 @@ import { PipelinePulse } from './dashboard/pipeline-pulse';
 import { InvoiceAging } from './dashboard/invoice-aging';
 import { PendingPayouts } from './dashboard/pending-payouts';
 import { RecentActivity } from './dashboard/recent-activity';
+import { VariancePill } from './dashboard/variance-pill';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,7 +30,7 @@ export default async function DashboardPage() {
       {data.nextStep && <OnboardingBanner step={data.nextStep} />}
       <div className="grid grid-cols-12 gap-3.5">
         <div className="col-span-12 lg:col-span-8">
-          <CashFlowChart weeks={data.weeks} />
+          <CashFlowChart weeks={data.weeks} legendRight={<VariancePill v={data.variance} />} />
         </div>
         <div className="col-span-12 lg:col-span-4">
           <KpiStrip data={data} />
