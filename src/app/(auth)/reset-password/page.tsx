@@ -41,6 +41,7 @@ function ResetPasswordContent() {
 
   const tokenHash = searchParams.get('token_hash');
   const otpType = searchParams.get('type');
+  const code = searchParams.get('code');
 
   const hasRecoveryQuery = useMemo(
     () => Boolean(tokenHash && (otpType === 'recovery' || otpType === 'email')),
@@ -51,36 +52,49 @@ function ResetPasswordContent() {
     let active = true;
 
     async function initializeSession() {
-      if (hasRecoveryQuery && tokenHash && otpType) {
-        const { error } = await supabase.auth.verifyOtp({
-          type: otpType as 'recovery' | 'email',
-          token_hash: tokenHash,
-        });
-        if (error && active) {
-          setMessage({ type: 'error', text: 'This reset link is invalid or has expired.' });
-          setReady(true);
-          return;
+      try {
+        if (code) {
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error && active) {
+            setMessage({ type: 'error', text: 'This reset link is invalid or has expired.' });
+            return;
+          }
+        } else if (hasRecoveryQuery && tokenHash && otpType) {
+          const { error } = await supabase.auth.verifyOtp({
+            type: otpType as 'recovery' | 'email',
+            token_hash: tokenHash,
+          });
+          if (error && active) {
+            setMessage({ type: 'error', text: 'This reset link is invalid or has expired.' });
+            return;
+          }
         }
-      }
 
-      const { data } = await supabase.auth.getSession();
-      if (!active) return;
+        const { data } = await supabase.auth.getSession();
+        if (!active) return;
 
-      if (!data.session) {
+        if (!data.session) {
+          setMessage({
+            type: 'error',
+            text: 'No valid recovery session found. Open the latest reset link from your email.',
+          });
+        }
+      } catch {
+        if (!active) return;
         setMessage({
           type: 'error',
-          text: 'No valid recovery session found. Open the latest reset link from your email.',
+          text: 'Could not verify the reset link right now. Please try opening it again from your email.',
         });
+      } finally {
+        if (active) setReady(true);
       }
-
-      setReady(true);
     }
 
     initializeSession();
     return () => {
       active = false;
     };
-  }, [hasRecoveryQuery, otpType, supabase.auth, tokenHash]);
+  }, [code, hasRecoveryQuery, otpType, supabase.auth, tokenHash]);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
