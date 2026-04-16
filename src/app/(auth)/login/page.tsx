@@ -73,6 +73,11 @@ export default function LoginPage() {
             required
             className="w-full h-10 rounded-xl border border-border bg-background px-3 text-sm"
           />
+          <div className="mt-2 text-right">
+            <Link href="/forgot-password" className="text-xs text-muted-foreground hover:text-foreground">
+              Forgot password?
+            </Link>
+          </div>
         </div>
         {message && (
           <p className={message.type === 'error' ? 'text-red-500 text-sm' : 'text-green-500 text-sm'}>
