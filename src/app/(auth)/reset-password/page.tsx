@@ -1,12 +1,35 @@
 'use client';
 
 import Link from 'next/link';
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 
 export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<ResetPasswordFallback />}>
+      <ResetPasswordContent />
+    </Suspense>
+  );
+}
+
+function ResetPasswordFallback() {
+  return (
+    <div className="w-full max-w-sm space-y-8">
+      <div className="text-center">
+        <h1 className="text-2xl font-semibold tracking-tight">Set new password</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Preparing secure recovery session…</p>
+      </div>
+      <div className="glass-card p-6 space-y-4">
+        <div className="h-10 rounded-xl border border-border bg-background/60" />
+        <div className="h-10 rounded-xl border border-border bg-background/60" />
+      </div>
+    </div>
+  );
+}
+
+function ResetPasswordContent() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);

@@ -371,7 +371,7 @@ export function ProjectTabs({
       </Tabs.Content>
 
       <Tabs.Content value="activity" className="outline-none">
-        <ProjectActivityTab activity={projectActivity} projectName={projectName} />
+        <ProjectActivityTab activity={projectActivity} />
       </Tabs.Content>
     </Tabs.Root>
   );
