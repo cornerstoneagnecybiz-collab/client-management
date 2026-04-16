@@ -6,6 +6,7 @@ import { KpiStrip } from './dashboard/kpi-strip';
 import { CashFlowChart } from './dashboard/cash-flow-chart';
 import { OnboardingBanner } from './dashboard/onboarding-banner';
 import { ActionQueue } from './dashboard/action-queue';
+import { PipelinePulse } from './dashboard/pipeline-pulse';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,6 +40,9 @@ export default async function DashboardPage() {
             payCount={data.payTotalCount}
             fulfilCount={data.fulfilTotalCount}
           />
+        </div>
+        <div className="col-span-12 lg:col-span-5">
+          <PipelinePulse stages={data.funnel} />
         </div>
       </div>
     </div>
