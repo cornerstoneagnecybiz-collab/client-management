@@ -1,6 +1,9 @@
 node_modules
 .next
 
+# Superpowers brainstorming scratch (mockups, server state, transcripts)
+.superpowers/
+
 # Env files with secrets — never commit
 .env
 .env.local
