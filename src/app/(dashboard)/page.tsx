@@ -9,6 +9,7 @@ import { ActionQueue } from './dashboard/action-queue';
 import { PipelinePulse } from './dashboard/pipeline-pulse';
 import { InvoiceAging } from './dashboard/invoice-aging';
 import { PendingPayouts } from './dashboard/pending-payouts';
+import { RecentActivity } from './dashboard/recent-activity';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,6 +52,9 @@ export default async function DashboardPage() {
         </div>
         <div className="col-span-12 md:col-span-6 lg:col-span-5">
           <PendingPayouts items={data.pendingPayoutsTop} />
+        </div>
+        <div className="col-span-12 md:col-span-12 lg:col-span-3">
+          <RecentActivity items={data.recentActivity} />
         </div>
       </div>
     </div>
