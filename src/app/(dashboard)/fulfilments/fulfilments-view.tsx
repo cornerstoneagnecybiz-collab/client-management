@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { SlidePanel } from '@/components/ui/slide-panel';
 import { ChevronRight } from 'lucide-react';
 import { plannedProfit } from '@/types';

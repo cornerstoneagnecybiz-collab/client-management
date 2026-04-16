@@ -7,9 +7,7 @@ import { Button } from '@/components/ui/button';
 import { SlidePanel } from '@/components/ui/slide-panel';
 import { Plus, ChevronRight } from 'lucide-react';
 import { plannedProfit } from '@/types';
-import type { FulfilmentStatus } from '@/types';
 import type { RequirementRow } from './page';
-import { createRequirement, updateRequirement } from './actions';
 import { RequirementDetailPanel } from './requirement-detail-panel';
 import { NewRequirementForm, type ServiceOption } from './new-requirement-form';
 

@@ -39,9 +39,6 @@ function looksLikeHeader(cells: string[]): boolean {
   return CSV_HEADER_ALIASES.some((h) => first.includes(h));
 }
 
-/** Column order: code, name, category, type, our_min, our_max, commission, default_client_rate */
-const COL_COUNT = 8;
-
 export type ParsedServiceRow = {
   service_code: string;
   service_name: string;

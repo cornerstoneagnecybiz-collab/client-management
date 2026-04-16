@@ -14,7 +14,7 @@ import { NotificationsDropdown } from '@/components/notifications-dropdown';
 export function TopBar() {
   const router = useRouter();
   const supabase = createClient();
-  const { theme, setTheme, resolvedTheme } = useTheme();
+  const { setTheme, resolvedTheme } = useTheme();
   const { density, setDensity } = useDensity();
 
   async function handleSignOut() {

@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { NewProjectForm } from './new-project-form';
 import { Button } from '@/components/ui/button';

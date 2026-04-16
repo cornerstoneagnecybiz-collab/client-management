@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { Button } from '@/components/ui/button';
 import { ClientTabs } from './client-tabs';
 import { ArrowLeft } from 'lucide-react';
-import type { InvoiceRow, PaymentRow } from '@/app/(dashboard)/finance/page';
+import type { InvoiceRow } from '@/app/(dashboard)/finance/page';
 import type { ActivityEntryRow } from '@/app/(dashboard)/activity/page';
 import type { LedgerEntryType } from '@/types';
 import { projectNameFromRelation } from '@/lib/utils';
@@ -43,7 +43,6 @@ export default async function ClientDetailPage({
 
   const projectIds = projects.map((p) => p.id);
   let clientInvoices: InvoiceRow[] = [];
-  let paymentsByInvoiceId: Record<string, PaymentRow[]> = {};
   let clientActivity: ActivityEntryRow[] = [];
 
   if (projectIds.length > 0) {
@@ -65,18 +64,6 @@ export default async function ClientDetailPage({
       billing_month: r.billing_month ?? null,
       created_at: r.created_at,
     }));
-
-    if (clientInvoices.length > 0) {
-      const { data: paymentRows } = await supabase
-        .from('payments_received')
-        .select('id, invoice_id, amount, date, mode')
-        .in('invoice_id', clientInvoices.map((i) => i.id));
-      for (const p of paymentRows ?? []) {
-        const row = { id: p.id, invoice_id: p.invoice_id, amount: p.amount, date: p.date, mode: p.mode };
-        if (!paymentsByInvoiceId[p.invoice_id]) paymentsByInvoiceId[p.invoice_id] = [];
-        paymentsByInvoiceId[p.invoice_id].push(row);
-      }
-    }
 
     const { data: ledgerRows } = await supabase
       .from('ledger_entries')
@@ -128,7 +115,6 @@ export default async function ClientDetailPage({
         client={clientRow}
         projects={projects}
         invoices={clientInvoices}
-        paymentsByInvoiceId={paymentsByInvoiceId}
         activityEntries={clientActivity}
       />
     </div>

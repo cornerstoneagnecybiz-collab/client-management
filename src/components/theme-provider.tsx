@@ -22,9 +22,7 @@ const ThemeContext = React.createContext<ThemeProviderState | undefined>(undefin
 
 export function ThemeProvider({
   children,
-  attribute = 'class',
   defaultTheme = 'dark',
-  enableSystem = true,
   storageKey = 'theme',
 }: ThemeProviderProps) {
   const [theme, setThemeState] = React.useState<Theme>(defaultTheme);

@@ -1,8 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
 import { RequirementsView } from './requirements-view';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
-import { Plus } from 'lucide-react';
 import { projectNameFromRelation, relationNameFromRelation } from '@/lib/utils';
 
 export type RequirementRow = {

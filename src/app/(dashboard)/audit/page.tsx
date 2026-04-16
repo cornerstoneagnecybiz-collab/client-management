@@ -1,7 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
 import { AuditView } from './audit-view';
-import Link from 'next/link';
-import { ChevronRight } from 'lucide-react';
 
 const ACTION_LABELS: Record<string, string> = {
   invoice_issued: 'Invoice issued',

@@ -104,7 +104,7 @@ export default async function ProjectDetailPage({
     created_at: r.created_at,
   }));
 
-  let projectPaymentsByInvoiceId: Record<string, PaymentRow[]> = {};
+  const projectPaymentsByInvoiceId: Record<string, PaymentRow[]> = {};
   if (projectInvoices.length > 0) {
     const { data: paymentRows } = await supabase
       .from('payments_received')

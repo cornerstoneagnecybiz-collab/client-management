@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import * as Select from '@radix-ui/react-select';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { updateVendorAction, createVendorLocation, deleteVendorLocation, deleteVendor } from './actions';
 import { getCatalogItemsForVendor, addCatalogVendor, removeCatalogVendor } from '../catalog/actions';

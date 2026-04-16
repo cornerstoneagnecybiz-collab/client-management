@@ -15,14 +15,6 @@ function formatDate(d: string | null): string {
   return new Date(d + 'Z').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  draft: 'Draft',
-  issued: 'Issued',
-  paid: 'Paid',
-  overdue: 'Overdue',
-  cancelled: 'Cancelled',
-};
-
 function formatBillingMonth(isoDate: string | null): string {
   if (!isoDate) return '';
   const d = new Date(isoDate + 'Z');

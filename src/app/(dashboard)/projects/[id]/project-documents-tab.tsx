@@ -73,8 +73,6 @@ export function ProjectDocumentsTab({ projectId, documents: initialDocs }: Proje
   const [createError, setCreateError] = React.useState<string | null>(null);
 
   const openDoc = documents.find((d) => d.id === openId);
-  const isText = openDoc?.doc_type === 'text';
-  const isSheet = openDoc?.doc_type === 'sheet';
 
   const addDocument = async (doc_type: 'text' | 'sheet') => {
     setCreateError(null);

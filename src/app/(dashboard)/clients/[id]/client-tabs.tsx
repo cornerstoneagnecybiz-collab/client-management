@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { updateClient } from '../actions';
-import type { InvoiceRow, PaymentRow } from '@/app/(dashboard)/finance/page';
+import type { InvoiceRow } from '@/app/(dashboard)/finance/page';
 import type { ActivityEntryRow } from '@/app/(dashboard)/activity/page';
 import type { InvoiceStatus, InvoiceType } from '@/types';
 
@@ -89,7 +89,6 @@ interface ClientTabsProps {
   client: ClientRow;
   projects: ProjectRow[];
   invoices: InvoiceRow[];
-  paymentsByInvoiceId: Record<string, PaymentRow[]>;
   activityEntries: ActivityEntryRow[];
 }
 
@@ -97,7 +96,6 @@ export function ClientTabs({
   client,
   projects,
   invoices,
-  paymentsByInvoiceId,
   activityEntries,
 }: ClientTabsProps) {
   const router = useRouter();

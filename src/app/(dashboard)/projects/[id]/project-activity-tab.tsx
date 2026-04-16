@@ -55,10 +55,9 @@ function IconForType({ type }: { type: ActivityItem['type'] }) {
 
 interface ProjectActivityTabProps {
   activity: ActivityItem[];
-  projectName: string;
 }
 
-export function ProjectActivityTab({ activity, projectName }: ProjectActivityTabProps) {
+export function ProjectActivityTab({ activity }: ProjectActivityTabProps) {
   if (activity.length === 0) {
     return (
       <div className="glass-card p-12 text-center">

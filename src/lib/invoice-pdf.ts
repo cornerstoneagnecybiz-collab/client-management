@@ -179,7 +179,6 @@ export async function buildInvoicePdf(data: InvoicePdfData, showTaxInvoice: bool
   y -= 24;
 
   // Line items table
-  const tableTop = y;
   const colDesc = MARGIN;
   const colType = MARGIN + 220;
   const colQty = MARGIN + 280;

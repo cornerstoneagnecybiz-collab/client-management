@@ -9,10 +9,6 @@ import { updateService, getCatalogVendorIds, addCatalogVendor, removeCatalogVend
 import { getSubTypeOptions } from './catalog-types';
 import type { CatalogType, DeliveryType } from '@/types/database';
 
-function formatMoney(n: number): string {
-  return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
-}
-
 export interface ServiceRow {
   id: string;
   service_code: string;
@@ -80,7 +76,7 @@ export function ServiceDetailPanel({ service, vendorOptions, onSuccess, onClose 
       setServiceType('');
       setServiceTypeOther('');
     }
-  }, [catalogType]);
+  }, [catalogType, serviceType]);
 
   const isOtherType = serviceType === 'other';
 
