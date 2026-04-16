@@ -5,6 +5,7 @@ import { fetchDashboardData } from './dashboard/_lib/queries';
 import { KpiStrip } from './dashboard/kpi-strip';
 import { CashFlowChart } from './dashboard/cash-flow-chart';
 import { OnboardingBanner } from './dashboard/onboarding-banner';
+import { ActionQueue } from './dashboard/action-queue';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,6 +29,16 @@ export default async function DashboardPage() {
         </div>
         <div className="col-span-12 lg:col-span-4">
           <KpiStrip data={data} />
+        </div>
+        <div className="col-span-12 lg:col-span-7">
+          <ActionQueue
+            collect={data.collect}
+            pay={data.pay}
+            fulfil={data.fulfil}
+            collectCount={data.collectTotalCount}
+            payCount={data.payTotalCount}
+            fulfilCount={data.fulfilTotalCount}
+          />
         </div>
       </div>
     </div>
