@@ -1,6 +1,6 @@
 // src/app/(dashboard)/dashboard/_lib/calc.test.ts
 import { describe, it, expect } from 'vitest';
-import { bucketLedgerByWeek } from './calc';
+import { bucketLedgerByWeek, computeMtd } from './calc';
 import type { LedgerEntry } from '@/types/database';
 
 function entry(partial: Partial<LedgerEntry>): LedgerEntry {
@@ -65,5 +65,62 @@ describe('bucketLedgerByWeek', () => {
     const out = bucketLedgerByWeek(rows, today);
     const w = out.find((w) => w.weekStart === '2026-04-06');
     expect(w?.moneyIn).toBe(700);
+  });
+});
+
+describe('computeMtd', () => {
+  const today = new Date('2026-04-17T12:00:00Z'); // day-of-month 17
+
+  it('returns zero value and null delta when ledger is empty', () => {
+    const out = computeMtd([], today);
+    expect(out.revenue.value).toBe(0);
+    expect(out.revenue.deltaPct).toBeNull();
+    expect(out.profit.value).toBe(0);
+    expect(out.profit.deltaPct).toBeNull();
+    expect(out.revenue.sparkline).toHaveLength(17); // day 1..17
+  });
+
+  it('sums client_payment for MTD revenue, current month only', () => {
+    const rows: LedgerEntry[] = [
+      entry({ type: 'client_payment', amount: 1000, date: '2026-04-01' }),
+      entry({ type: 'client_payment', amount: 500,  date: '2026-04-16' }),
+      entry({ type: 'client_payment', amount: 9999, date: '2026-03-30' }),
+    ];
+    const out = computeMtd(rows, today);
+    expect(out.revenue.value).toBe(1500);
+  });
+
+  it('computes MTD profit as client_payment minus vendor_payment current month', () => {
+    const rows: LedgerEntry[] = [
+      entry({ type: 'client_payment', amount: 1000, date: '2026-04-10' }),
+      entry({ type: 'vendor_payment', amount: 300,  date: '2026-04-12' }),
+    ];
+    const out = computeMtd(rows, today);
+    expect(out.profit.value).toBe(700);
+  });
+
+  it('deltaPct compares MTD-through-today vs same day-of-month previous month', () => {
+    const rows: LedgerEntry[] = [
+      // Current month: ₹2000 through day 17
+      entry({ type: 'client_payment', amount: 2000, date: '2026-04-10' }),
+      // Prior month: ₹1000 through day 17 of March
+      entry({ type: 'client_payment', amount: 1000, date: '2026-03-10' }),
+      // Noise past day-17 of March should be ignored
+      entry({ type: 'client_payment', amount: 5000, date: '2026-03-25' }),
+    ];
+    const out = computeMtd(rows, today);
+    expect(out.revenue.deltaPct).toBeCloseTo(100, 5); // (2000-1000)/1000 * 100
+  });
+
+  it('sparkline accumulates day-by-day for the month', () => {
+    const rows: LedgerEntry[] = [
+      entry({ type: 'client_payment', amount: 100, date: '2026-04-01' }),
+      entry({ type: 'client_payment', amount: 50,  date: '2026-04-03' }),
+    ];
+    const out = computeMtd(rows, today);
+    expect(out.revenue.sparkline[0]).toBe(100);
+    expect(out.revenue.sparkline[1]).toBe(100);
+    expect(out.revenue.sparkline[2]).toBe(150);
+    expect(out.revenue.sparkline.at(-1)).toBe(150);
   });
 });
