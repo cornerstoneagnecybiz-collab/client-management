@@ -1,6 +1,6 @@
 // src/app/(dashboard)/dashboard/_lib/calc.ts
-import type { LedgerEntry } from '@/types/database';
-import type { KpiValue, WeekBucket } from './types';
+import type { Invoice, LedgerEntry, PaymentReceived, VendorPayout } from '@/types/database';
+import type { AgingBuckets, KpiValue, NextStep, PendingCash, WeekBucket } from './types';
 
 const DAY_MS = 86_400_000;
 
@@ -130,4 +130,107 @@ export function computeMtd(entries: LedgerEntry[], now: Date): MtdResult {
     revenue: { value: currentRevenue, deltaPct: pctDelta(currentRevenue, priorRevenue), sparkline: revenueSpark },
     profit: { value: currentProfit, deltaPct: pctDelta(currentProfit, priorProfit), sparkline: profitSpark },
   };
+}
+
+function daysBetween(fromIso: string, now: Date): number {
+  const from = new Date(`${fromIso}T00:00:00Z`).getTime();
+  const nowMs = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  return Math.floor((nowMs - from) / DAY_MS);
+}
+
+function outstandingByInvoice(invoices: Invoice[], payments: PaymentReceived[]): Map<string, number> {
+  const paidMap = new Map<string, number>();
+  for (const p of payments) {
+    paidMap.set(p.invoice_id, (paidMap.get(p.invoice_id) ?? 0) + p.amount);
+  }
+  const out = new Map<string, number>();
+  for (const inv of invoices) {
+    if (inv.status !== 'issued' && inv.status !== 'overdue') continue;
+    const paid = paidMap.get(inv.id) ?? 0;
+    const due = inv.amount - paid;
+    if (due > 0) out.set(inv.id, due);
+  }
+  return out;
+}
+
+export function computeAging(
+  invoices: Invoice[],
+  payments: PaymentReceived[],
+  /** Reserved for future use (invoice-client join); kept for API stability. */
+  _clientNameByInvoiceId: Array<{ id: string; clientName: string }>,
+  now: Date,
+): AgingBuckets {
+  const outstanding = outstandingByInvoice(invoices, payments);
+  const buckets: AgingBuckets = {
+    current: { amount: 0, count: 0 },
+    stale: { amount: 0, count: 0 },
+    overdue: { amount: 0, count: 0 },
+    total: 0,
+    oldestOpen: null,
+  };
+  let oldest: { inv: Invoice; days: number } | null = null;
+  for (const inv of invoices) {
+    const due = outstanding.get(inv.id);
+    if (!due) continue;
+    const days = inv.issue_date ? daysBetween(inv.issue_date, now) : 0;
+    if (days <= 30) {
+      buckets.current.amount += due;
+      buckets.current.count += 1;
+    } else if (days <= 60) {
+      buckets.stale.amount += due;
+      buckets.stale.count += 1;
+    } else {
+      buckets.overdue.amount += due;
+      buckets.overdue.count += 1;
+    }
+    buckets.total += due;
+    if (!oldest || days > oldest.days) oldest = { inv, days };
+  }
+  if (oldest) {
+    const lookup = _clientNameByInvoiceId.find((x) => x.id === oldest!.inv.id);
+    buckets.oldestOpen = {
+      invoiceId: oldest.inv.id,
+      label: `INV-${oldest.inv.id.slice(0, 8)}`,
+      clientName: lookup?.clientName ?? '—',
+      daysOld: oldest.days,
+    };
+  }
+  return buckets;
+}
+
+export function computePendingCash(
+  invoices: Invoice[],
+  payments: PaymentReceived[],
+  pendingPayouts: VendorPayout[],
+): PendingCash {
+  const outstanding = outstandingByInvoice(invoices, payments);
+  let toCollect = 0;
+  for (const v of outstanding.values()) toCollect += v;
+  const toPay = pendingPayouts
+    .filter((p) => p.status === 'pending')
+    .reduce((s, p) => s + p.amount, 0);
+  return { toCollect, toPay, net: toCollect - toPay };
+}
+
+export function computeNextStep(counts: {
+  clients: number;
+  projects: number;
+  requirements: number;
+}): NextStep | null {
+  if (counts.clients === 0) return {
+    label: 'Add your first client',
+    href: '/clients',
+    description: 'Clients are the starting point. Then you can create projects for them.',
+  };
+  if (counts.projects === 0) return {
+    label: 'Create a project',
+    href: '/projects/new',
+    description: 'Link a project to a client to track work and billing.',
+  };
+  if (counts.requirements === 0) return {
+    label: 'Add requirements',
+    href: '/requirements',
+    description: 'Define scope, assign vendors, and set pricing per project.',
+  };
+  return null;
 }

@@ -1,7 +1,7 @@
 // src/app/(dashboard)/dashboard/_lib/calc.test.ts
 import { describe, it, expect } from 'vitest';
-import { bucketLedgerByWeek, computeMtd } from './calc';
-import type { LedgerEntry } from '@/types/database';
+import { bucketLedgerByWeek, computeMtd, computeAging, computePendingCash, computeNextStep } from './calc';
+import type { Invoice, LedgerEntry, PaymentReceived, VendorPayout } from '@/types/database';
 
 function entry(partial: Partial<LedgerEntry>): LedgerEntry {
   return {
@@ -122,5 +122,88 @@ describe('computeMtd', () => {
     expect(out.revenue.sparkline[1]).toBe(100);
     expect(out.revenue.sparkline[2]).toBe(150);
     expect(out.revenue.sparkline.at(-1)).toBe(150);
+  });
+});
+
+function invoice(p: Partial<Invoice>): Invoice {
+  return {
+    id: p.id ?? crypto.randomUUID(),
+    project_id: 'p1',
+    type: 'project',
+    amount: p.amount ?? 1000,
+    status: p.status ?? 'issued',
+    issue_date: p.issue_date ?? '2026-01-01',
+    due_date: p.due_date ?? null,
+    billing_month: null,
+    created_at: p.created_at ?? p.issue_date ?? '2026-01-01',
+    updated_at: p.updated_at ?? p.issue_date ?? '2026-01-01',
+  };
+}
+
+function payment(invoice_id: string, amount: number): PaymentReceived {
+  return { id: crypto.randomUUID(), invoice_id, amount, date: '2026-01-15', mode: null, created_at: '2026-01-15' };
+}
+
+describe('computeAging', () => {
+  const today = new Date('2026-04-17T12:00:00Z');
+
+  it('returns empty structure when no invoices', () => {
+    const out = computeAging([], [], [], today);
+    expect(out.total).toBe(0);
+    expect(out.oldestOpen).toBeNull();
+  });
+
+  it('ignores fully-paid invoices', () => {
+    const inv = invoice({ id: 'i1', amount: 500, issue_date: '2026-02-01' });
+    const out = computeAging([inv], [payment('i1', 500)], [], today);
+    expect(out.total).toBe(0);
+  });
+
+  it('buckets outstanding amount by age since issue_date', () => {
+    const rows = [
+      invoice({ id: 'a', amount: 1000, issue_date: '2026-04-10' }), // 7d -> current
+      invoice({ id: 'b', amount: 2000, issue_date: '2026-03-10' }), // 38d -> stale
+      invoice({ id: 'c', amount: 3000, issue_date: '2026-01-10' }), // 97d -> overdue
+    ];
+    const out = computeAging(rows, [], [], today);
+    expect(out.current.amount).toBe(1000);
+    expect(out.stale.amount).toBe(2000);
+    expect(out.overdue.amount).toBe(3000);
+    expect(out.total).toBe(6000);
+    expect(out.oldestOpen?.invoiceId).toBe('c');
+    expect(out.oldestOpen?.daysOld).toBe(97);
+  });
+});
+
+describe('computePendingCash', () => {
+  it('nets outstanding invoices against pending payouts', () => {
+    const inv = invoice({ id: 'i1', amount: 1000, issue_date: '2026-04-01' });
+    const po: VendorPayout = {
+      id: 'po1', requirement_id: 'r1', vendor_id: 'v1', amount: 400, status: 'pending',
+      paid_date: null, created_at: '2026-04-01', updated_at: '2026-04-01',
+    };
+    const out = computePendingCash([inv], [payment('i1', 200)], [po]);
+    expect(out.toCollect).toBe(800);
+    expect(out.toPay).toBe(400);
+    expect(out.net).toBe(400);
+  });
+});
+
+describe('computeNextStep', () => {
+  it('prompts "Add your first client" when there are no clients', () => {
+    const out = computeNextStep({ clients: 0, projects: 0, requirements: 0 });
+    expect(out?.href).toBe('/clients');
+  });
+  it('prompts "Create a project" when clients exist but no projects', () => {
+    const out = computeNextStep({ clients: 1, projects: 0, requirements: 0 });
+    expect(out?.href).toBe('/projects/new');
+  });
+  it('prompts "Add requirements" when projects exist but no requirements', () => {
+    const out = computeNextStep({ clients: 3, projects: 2, requirements: 0 });
+    expect(out?.href).toBe('/requirements');
+  });
+  it('returns null once all three tables are non-empty', () => {
+    const out = computeNextStep({ clients: 3, projects: 2, requirements: 5 });
+    expect(out).toBeNull();
   });
 });
