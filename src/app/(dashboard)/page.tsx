@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { fetchDashboardData } from './dashboard/_lib/queries';
 import { KpiStrip } from './dashboard/kpi-strip';
 import { CashFlowChart } from './dashboard/cash-flow-chart';
+import { OnboardingBanner } from './dashboard/onboarding-banner';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,6 +21,7 @@ export default async function DashboardPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
         <p className="text-muted-foreground text-sm">Command center.</p>
       </header>
+      {data.nextStep && <OnboardingBanner step={data.nextStep} />}
       <div className="grid grid-cols-12 gap-3.5">
         <div className="col-span-12 lg:col-span-8">
           <CashFlowChart weeks={data.weeks} />
