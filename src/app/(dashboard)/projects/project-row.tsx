@@ -25,7 +25,7 @@ interface ProjectRowProps {
     engagement_type: 'one_time' | 'monthly';
     start_date: string | null;
     end_date: string | null;
-    client_name: string;
+    client_name: string | null;
   };
   index: number;
 }
@@ -51,7 +51,7 @@ export function ProjectRow({ row, index }: ProjectRowProps) {
       }}
     >
       <td className="content-cell px-4 font-medium">{row.name}</td>
-      <td className="content-cell px-4 text-muted-foreground">{row.client_name}</td>
+      <td className="content-cell px-4 text-muted-foreground">{row.client_name ?? '—'}</td>
       <td className="content-cell px-4">
         <span
           className="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-xs font-medium bg-muted text-muted-foreground"

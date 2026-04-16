@@ -14,7 +14,6 @@ import {
   FolderOpen,
   Activity,
   Plus,
-  ChevronRight,
   MessageSquare,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -24,8 +23,8 @@ import { ProjectLedgerTab } from './project-ledger-tab';
 import { ProjectActivityTab, type ActivityItem } from './project-activity-tab';
 import { ProjectNotesTab } from './project-notes-tab';
 import { ProjectDocumentsTab } from './project-documents-tab';
-import type { InvoiceRow } from '@/app/(dashboard)/finance/page';
-import type { PaymentRow } from '@/app/(dashboard)/finance/invoice-detail-panel';
+import type { InvoiceRow } from '@/app/(dashboard)/invoicing/page';
+import type { PaymentRow } from '@/app/(dashboard)/invoicing/invoice-detail-panel';
 import type { LedgerEntryRow } from '@/app/(dashboard)/ledger/page';
 import type { ProjectNote } from '@/types/database';
 import type { ProjectDocument } from '@/types/database';
@@ -50,9 +49,9 @@ interface ProjectRequirementRow {
   project_id: string;
   project_name: string;
   engagement_type?: 'one_time' | 'monthly';
-  service_catalog_id: string;
   service_name: string;
-  service_code: string;
+  service_category: string | null;
+  pricing_type: string;
   title: string;
   description: string | null;
   delivery: string;
@@ -72,6 +71,7 @@ interface ProjectTabsProps {
   projectName: string;
   overview: {
     clientName: string;
+    clientId?: string | null;
     engagementType?: 'one_time' | 'monthly';
     status: ProjectStatus;
     startDate: string | null;
@@ -141,7 +141,15 @@ export function ProjectTabs({
             <dl className="grid gap-3 sm:grid-cols-2">
               <div>
                 <dt className="text-xs text-muted-foreground">Client</dt>
-                <dd className="font-medium">{overview.clientName}</dd>
+                <dd className="font-medium">
+                  {overview.clientId ? (
+                    <Link href={`/clients/${overview.clientId}`} className="text-primary hover:underline">
+                      {overview.clientName}
+                    </Link>
+                  ) : (
+                    overview.clientName
+                  )}
+                </dd>
               </div>
               {overview.engagementType && (
                 <div>
@@ -339,18 +347,65 @@ export function ProjectTabs({
       </Tabs.Content>
 
       <Tabs.Content value="vendors" className="outline-none">
-        <div className="glass-card p-12 text-center">
-          <Truck className="mx-auto h-12 w-12 text-muted-foreground/50" />
-          <p className="mt-3 text-sm font-medium text-foreground">Vendors on this project</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Vendors assigned to requirements in this project will appear here.
-          </p>
-          <Link
-            href={`/requirements?project=${projectId}&new=1`}
-            className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
-          >
-            Add requirement <ChevronRight className="h-4 w-4" />
-          </Link>
+        <div className="glass-card overflow-hidden">
+          <div className="flex items-center justify-between border-b border-border px-4 py-3">
+            <h2 className="font-medium">Vendors on this project</h2>
+            <Button asChild size="sm">
+              <Link href={`/requirements?project=${projectId}&new=1`}>
+                <Plus className="h-4 w-4" />
+                Add requirement
+              </Link>
+            </Button>
+          </div>
+          {projectVendors.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground text-sm">
+              No vendors assigned yet.{' '}
+              <Link href={`/requirements?project=${projectId}&new=1`} className="text-primary hover:underline">
+                Add a requirement
+              </Link>{' '}
+              and assign a vendor.
+            </div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="content-cell text-left font-medium px-4">Vendor</th>
+                  <th className="content-cell text-left font-medium px-4">Requirements</th>
+                  <th className="content-cell text-left font-medium px-4">Status breakdown</th>
+                  <th className="content-cell w-10 px-2" />
+                </tr>
+              </thead>
+              <tbody>
+                {projectVendors.map((vendor) => {
+                  const vendorReqs = projectRequirements.filter((r) => r.assigned_vendor_id === vendor.id);
+                  const fulfilled = vendorReqs.filter((r) => r.fulfilment_status === 'fulfilled').length;
+                  const pending = vendorReqs.filter((r) => r.fulfilment_status === 'pending').length;
+                  const inProgress = vendorReqs.filter((r) => r.fulfilment_status === 'in_progress').length;
+                  return (
+                    <tr key={vendor.id} className="border-b border-border/50 hover:bg-muted/30">
+                      <td className="content-cell px-4 font-medium">{vendor.name}</td>
+                      <td className="content-cell px-4 text-muted-foreground">{vendorReqs.length} requirement{vendorReqs.length !== 1 ? 's' : ''}</td>
+                      <td className="content-cell px-4">
+                        <span className="inline-flex flex-wrap gap-1 text-xs">
+                          {fulfilled > 0 && <span className="rounded-lg bg-emerald-500/10 px-2 py-0.5 text-emerald-700 dark:text-emerald-300">{fulfilled} fulfilled</span>}
+                          {inProgress > 0 && <span className="rounded-lg bg-blue-500/10 px-2 py-0.5 text-blue-700 dark:text-blue-300">{inProgress} in progress</span>}
+                          {pending > 0 && <span className="rounded-lg bg-muted px-2 py-0.5 text-muted-foreground">{pending} pending</span>}
+                        </span>
+                      </td>
+                      <td className="content-cell px-2">
+                        <Link
+                          href={`/requirements?vendor=${vendor.id}`}
+                          className="text-xs text-primary hover:underline"
+                        >
+                          View
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
       </Tabs.Content>
 

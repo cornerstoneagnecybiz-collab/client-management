@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Command } from 'cmdk';
 import * as Dialog from '@radix-ui/react-dialog';
-import { Search, FolderKanban, Truck, Users, FileText, ClipboardList, Plus, Package } from 'lucide-react';
+import { Search, FolderKanban, Truck, Users, FileText, ClipboardList, Plus, Handshake } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function CommandPaletteTrigger() {
@@ -68,7 +68,7 @@ export function CommandPaletteTrigger() {
               New vendor
             </Command.Item>
             <Command.Item
-              onSelect={() => { router.push('/projects/new'); setOpen(false); }}
+              onSelect={() => { router.push('/projects?create=1'); setOpen(false); }}
               className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm data-[selected=true]:bg-muted"
             >
               <FolderKanban className="h-4 w-4" />
@@ -82,18 +82,18 @@ export function CommandPaletteTrigger() {
               Add requirement
             </Command.Item>
             <Command.Item
-              onSelect={() => { router.push('/finance'); setOpen(false); }}
+              onSelect={() => { router.push('/invoicing'); setOpen(false); }}
               className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm data-[selected=true]:bg-muted"
             >
               <FileText className="h-4 w-4" />
-              Finance (invoices & payouts)
+              Invoicing
             </Command.Item>
             <Command.Item
-              onSelect={() => { router.push('/catalog?new=1'); setOpen(false); }}
+              onSelect={() => { router.push('/settlement'); setOpen(false); }}
               className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm data-[selected=true]:bg-muted"
             >
-              <Package className="h-4 w-4" />
-              Add service to catalog
+              <Handshake className="h-4 w-4" />
+              Settlement
             </Command.Item>
           </Command.Group>
           <Command.Group heading="Go to" className="mt-2 px-2">
@@ -115,9 +115,9 @@ export function CommandPaletteTrigger() {
             <Command.Item onSelect={() => { router.push('/ledger'); setOpen(false); }} className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm data-[selected=true]:bg-muted">
               Ledger
             </Command.Item>
-            <Command.Item onSelect={() => { router.push('/catalog'); setOpen(false); }} className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm data-[selected=true]:bg-muted">
-              <Package className="h-4 w-4" />
-              Catalog
+            <Command.Item onSelect={() => { router.push('/settlement'); setOpen(false); }} className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm data-[selected=true]:bg-muted">
+              <Handshake className="h-4 w-4" />
+              Settlement
             </Command.Item>
             <Command.Item onSelect={() => { router.push('/reports'); setOpen(false); }} className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm data-[selected=true]:bg-muted">
               Analytics

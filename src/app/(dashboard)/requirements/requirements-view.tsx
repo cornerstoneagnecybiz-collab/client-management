@@ -9,7 +9,8 @@ import { Plus, ChevronRight } from 'lucide-react';
 import { plannedProfit } from '@/types';
 import type { RequirementRow } from './page';
 import { RequirementDetailPanel } from './requirement-detail-panel';
-import { NewRequirementForm, type ServiceOption } from './new-requirement-form';
+import { NewRequirementForm } from './new-requirement-form';
+import { useDirtyConfirm } from '@/hooks/use-dirty-confirm';
 
 const STATUS_LABELS: Record<string, string> = {
   pending: 'Pending',
@@ -32,7 +33,6 @@ interface RequirementsViewProps {
   initialProjectId?: string | null;
   initialCreateOpen?: boolean;
   projectOptions: { value: string; label: string }[];
-  serviceOptions: ServiceOption[];
   vendorOptions: { value: string; label: string }[];
   title: string;
   description: string;
@@ -45,7 +45,6 @@ export function RequirementsView({
   initialProjectId,
   initialCreateOpen,
   projectOptions,
-  serviceOptions,
   vendorOptions,
   title,
   description,
@@ -70,12 +69,14 @@ export function RequirementsView({
 
   const selectedRequirement = detailId ? requirements.find((r) => r.id === detailId) : null;
 
+  const newRequirementDirty = useDirtyConfirm(() => setCreateOpen(false));
+
   function refresh() {
     router.refresh();
   }
 
   async function handleCreateSuccess() {
-    setCreateOpen(false);
+    newRequirementDirty.closeConfirmed();
     refresh();
   }
 
@@ -119,7 +120,7 @@ export function RequirementsView({
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="content-cell text-left font-medium px-4">Catalog item</th>
+                  <th className="content-cell text-left font-medium px-4">Service</th>
                   <th className="content-cell text-left font-medium px-4">Project</th>
                   <th className="content-cell text-left font-medium px-4">Vendor</th>
                   <th className="content-cell text-right font-medium px-4">Client price</th>
@@ -206,14 +207,20 @@ export function RequirementsView({
         </div>
       </div>
 
-      <SlidePanel open={createOpen} onOpenChange={setCreateOpen} title="New requirement">
+      <SlidePanel
+        open={createOpen}
+        onOpenChange={newRequirementDirty.handleOpenChange}
+        title="New requirement"
+        description="Scope, pricing, and delivery in 3 quick steps."
+        variant="form"
+      >
         <NewRequirementForm
           projectOptions={projectOptions}
-          serviceOptions={serviceOptions}
           vendorOptions={vendorOptions}
           defaultProjectId={initialProjectId ?? undefined}
+          onDirtyChange={newRequirementDirty.setDirty}
           onSuccess={handleCreateSuccess}
-          onCancel={() => setCreateOpen(false)}
+          onCancel={() => newRequirementDirty.handleOpenChange(false)}
         />
       </SlidePanel>
 

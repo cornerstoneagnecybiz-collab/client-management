@@ -6,10 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SlidePanel } from '@/components/ui/slide-panel';
+import { Modal } from '@/components/ui/modal';
 import { Plus, ChevronRight, ArrowDownLeft, ArrowUpRight, FileText, Banknote } from 'lucide-react';
 import { actualProfit } from '@/types';
 import { NewEntryForm } from './new-entry-form';
 import { EntryDetailPanel, type LedgerEntryRow } from './entry-detail-panel';
+import { useDirtyConfirm } from '@/hooks/use-dirty-confirm';
 
 const TYPE_LABELS: Record<string, string> = {
   client_invoice: 'Client invoice',
@@ -82,6 +84,8 @@ export function LedgerView({
   }, [entries]);
 
   const selectedEntry = detailId ? entries.find((e) => e.id === detailId) : null;
+
+  const addEntryDirty = useDirtyConfirm(() => setAddOpen(false));
 
   function refresh() {
     router.refresh();
@@ -264,14 +268,20 @@ export function LedgerView({
         </div>
       </div>
 
-      <SlidePanel open={addOpen} onOpenChange={setAddOpen} title="Add ledger entry">
+      <Modal
+        open={addOpen}
+        onOpenChange={addEntryDirty.handleOpenChange}
+        title="Add ledger entry"
+        description="Track a client/vendor money movement for a project."
+      >
         <NewEntryForm
           projectOptions={projectOptionsForForm}
           defaultProjectId={projectId ?? ''}
-          onSuccess={() => { setAddOpen(false); refresh(); }}
-          onCancel={() => setAddOpen(false)}
+          onDirtyChange={addEntryDirty.setDirty}
+          onSuccess={() => { addEntryDirty.closeConfirmed(); refresh(); }}
+          onCancel={() => addEntryDirty.handleOpenChange(false)}
         />
-      </SlidePanel>
+      </Modal>
 
       <SlidePanel open={!!selectedEntry} onOpenChange={(open) => !open && setDetailId(null)} title={selectedEntry ? TYPE_LABELS[selectedEntry.type] ?? 'Entry' : 'Entry'}>
         {selectedEntry && (

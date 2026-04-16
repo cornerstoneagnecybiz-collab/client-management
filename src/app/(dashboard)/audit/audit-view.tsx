@@ -93,9 +93,9 @@ export function AuditView({
             <tbody>
               {entries.map((e) => {
                 const href =
-                  e.entity_type === 'invoice' ? `/finance?id=${e.entity_id}` :
-                  e.entity_type === 'payment_received' && e.meta?.invoice_id ? `/finance?id=${e.meta.invoice_id}` :
-                  e.entity_type === 'vendor_payout' ? '/finance' :
+                  e.entity_type === 'invoice' ? `/invoicing?id=${e.entity_id}` :
+                  e.entity_type === 'payment_received' && e.meta?.invoice_id ? `/invoicing?id=${e.meta.invoice_id}` :
+                  e.entity_type === 'vendor_payout' ? `/settlement${e.entity_id}` :
                   e.entity_type === 'requirement' ? `/requirements?id=${e.entity_id}` : null;
                 const details: string[] = [];
                 if (e.meta?.amount != null) details.push(formatMoney(Number(e.meta.amount)));

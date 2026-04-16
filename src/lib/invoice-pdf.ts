@@ -1,6 +1,6 @@
 /**
  * Server-only: build invoice PDF document for printing (not browser screen print).
- * Used by GET /finance/invoice/[id]/pdf. Requires Node (fs/path).
+ * Used by GET /invoicing/invoice/[id]/pdf. Requires Node (fs/path).
  */
 import { PDFDocument, StandardFonts, type PDFImage } from 'pdf-lib';
 import path from 'node:path';

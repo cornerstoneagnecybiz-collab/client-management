@@ -269,7 +269,7 @@ export function InvoiceDetailPanel({ invoice, payments, onSuccess, onClose }: In
 
       <div className="flex flex-wrap gap-2">
         <Button variant="outline" size="sm" asChild>
-          <Link href={`/finance/invoice/${invoice.id}/print`} target="_blank" rel="noopener noreferrer">
+          <Link href={`/invoicing/invoice/${invoice.id}/print`} target="_blank" rel="noopener noreferrer">
             Preview / Print
           </Link>
         </Button>

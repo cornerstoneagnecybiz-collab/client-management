@@ -16,7 +16,9 @@ export default async function FulfilmentsPage({
     .select(`
       id,
       project_id,
-      service_catalog_id,
+      service_name,
+      service_category,
+      pricing_type,
       title,
       description,
       delivery,
@@ -30,7 +32,6 @@ export default async function FulfilmentsPage({
       fulfilment_status,
       created_at,
       projects(name, engagement_type),
-      service_catalog(service_name, service_code),
       vendors(name)
     `)
     .in('fulfilment_status', ['pending', 'in_progress'])
@@ -54,17 +55,9 @@ export default async function FulfilmentsPage({
       const v = (Array.isArray(proj) ? proj[0]?.engagement_type : proj?.engagement_type) ?? 'one_time';
       return v === 'monthly' ? 'monthly' : 'one_time';
     })(),
-    service_catalog_id: r.service_catalog_id,
-    service_name: (() => {
-      const c = r.service_catalog as unknown as { service_name?: string; service_code?: string } | { service_name?: string; service_code?: string }[] | null;
-      const cat = c == null ? null : Array.isArray(c) ? c[0] : c;
-      return cat?.service_name ?? '—';
-    })(),
-    service_code: (() => {
-      const c = r.service_catalog as unknown as { service_name?: string; service_code?: string } | { service_name?: string; service_code?: string }[] | null;
-      const cat = c == null ? null : Array.isArray(c) ? c[0] : c;
-      return cat?.service_code ?? '';
-    })(),
+    service_name: (r.service_name as string) || '—',
+    service_category: (r.service_category as string | null) ?? null,
+    pricing_type: (r.pricing_type as string) || 'fixed',
     title: r.title,
     description: r.description,
     delivery: (r.delivery as string) || 'vendor',

@@ -11,7 +11,7 @@ import {
   ClipboardList,
   Banknote,
   ChevronRight,
-  History,
+  Handshake,
   ListChecks,
 } from 'lucide-react';
 
@@ -93,7 +93,7 @@ export default async function DashboardPage() {
   const hasRequirements = (requirementsCount ?? 0) > 0;
   let nextStep: { label: string; href: string; description: string } | null = null;
   if (!hasClients) nextStep = { label: 'Add your first client', href: '/clients', description: 'Clients are the starting point. Then you can create projects for them.' };
-  else if (!hasProjects) nextStep = { label: 'Create a project', href: '/projects/new', description: 'Link a project to a client to track work and billing.' };
+  else if (!hasProjects) nextStep = { label: 'Create a project', href: '/projects?create=1', description: 'Link a project to a client to track work and billing.' };
   else if (!hasRequirements) nextStep = { label: 'Add requirements', href: '/requirements', description: 'Define scope, assign vendors, and set pricing per project.' };
 
   return (
@@ -107,15 +107,15 @@ export default async function DashboardPage() {
         <h2 className="text-sm font-medium text-muted-foreground mb-3">Quick links</h2>
         <div className="grid gap-3 sm:grid-cols-2">
           <Link
-            href="/activity"
+            href="/settlement"
             className="glass-card flex items-center gap-4 rounded-xl border-2 border-border p-4 transition-colors hover:border-primary/30 hover:bg-muted/20"
           >
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
-              <History className="h-6 w-6" />
+              <Handshake className="h-6 w-6" />
             </div>
             <div className="min-w-0">
-              <p className="font-semibold">Activity</p>
-              <p className="text-xs text-muted-foreground">Invoices issued, payments received, vendor payouts.</p>
+              <p className="font-semibold">Settlement</p>
+              <p className="text-xs text-muted-foreground">Clear pending collections and vendor payouts.</p>
             </div>
             <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
           </Link>
@@ -172,7 +172,7 @@ export default async function DashboardPage() {
             )}
             {invoicesToCollectCount > 0 && (
               <Link
-                href="/finance"
+                href="/invoicing"
                 className="glass-card flex items-center gap-3 rounded-xl border p-4 transition-colors hover:bg-muted/30"
               >
                 <DollarSign className="h-8 w-8 shrink-0 text-muted-foreground" />
@@ -185,7 +185,7 @@ export default async function DashboardPage() {
             )}
             {pendingPayoutsCount > 0 && (
               <Link
-                href="/finance"
+                href="/settlement"
                 className="glass-card flex items-center gap-3 rounded-xl border p-4 transition-colors hover:bg-muted/30"
               >
                 <Banknote className="h-8 w-8 shrink-0 text-muted-foreground" />
@@ -205,7 +205,7 @@ export default async function DashboardPage() {
           <h2 className="text-sm font-medium text-muted-foreground mb-3">Quick actions</h2>
           <div className="grid gap-3 sm:grid-cols-3">
             <Link
-              href="/finance"
+              href="/invoicing"
               className="glass-card flex items-center gap-3 rounded-xl border p-4 transition-colors hover:bg-muted/30"
             >
               <DollarSign className="h-8 w-8 shrink-0 text-muted-foreground" />
@@ -216,7 +216,7 @@ export default async function DashboardPage() {
               <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground ml-auto" />
             </Link>
             <Link
-              href="/finance"
+              href="/invoicing"
               className="glass-card flex items-center gap-3 rounded-xl border p-4 transition-colors hover:bg-muted/30"
             >
               <Banknote className="h-8 w-8 shrink-0 text-muted-foreground" />
@@ -306,7 +306,7 @@ export default async function DashboardPage() {
         <div className="glass-card overflow-hidden">
           {!recentLedger?.length ? (
             <div className="p-8 text-center text-muted-foreground text-sm">
-              No activity yet. Record payments and vendor payouts in Finance, or add entries in Ledger.
+              No activity yet. Record payments in Invoicing, settle payouts in Settlement, or add entries in Ledger.
             </div>
           ) : (
             <ul className="divide-y divide-border">
@@ -334,11 +334,11 @@ export default async function DashboardPage() {
             </ul>
           )}
           <div className="border-t border-border px-4 py-2 flex gap-4">
-            <Link href="/activity" className="text-sm font-medium text-primary hover:underline">
-              View all activity →
+            <Link href="/ledger" className="text-sm font-medium text-primary hover:underline">
+              View ledger →
             </Link>
-            <Link href="/ledger" className="text-sm text-muted-foreground hover:underline">
-              Ledger
+            <Link href="/activity" className="text-sm text-muted-foreground hover:underline">
+              Activity log
             </Link>
           </div>
         </div>

@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 
 export async function createVendorAction(input: {
   name: string;
-  category?: string | null;
+  categories?: string[];
   phone?: string | null;
   email?: string | null;
   payment_terms?: string | null;
@@ -22,7 +22,7 @@ export async function createVendorAction(input: {
     .from('vendors')
     .insert({
       name: input.name.trim(),
-      category: input.category?.trim() || null,
+      categories: input.categories ?? [],
       phone: input.phone?.trim() || null,
       email: input.email?.trim() || null,
       payment_terms: input.payment_terms?.trim() || null,
@@ -54,7 +54,7 @@ export async function updateVendorAction(
   id: string,
   updates: {
     name?: string;
-    category?: string | null;
+    categories?: string[];
     phone?: string | null;
     email?: string | null;
     payment_terms?: string | null;
@@ -64,7 +64,6 @@ export async function updateVendorAction(
   const payload = {
     ...updates,
     name: updates.name?.trim(),
-    category: updates.category?.trim() || null,
     phone: updates.phone?.trim() || null,
     email: updates.email?.trim() || null,
     payment_terms: updates.payment_terms?.trim() || null,

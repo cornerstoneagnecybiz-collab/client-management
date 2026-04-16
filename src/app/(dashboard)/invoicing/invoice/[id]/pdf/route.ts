@@ -6,7 +6,7 @@ import { buildInvoicePdf } from '@/lib/invoice-pdf';
 export const runtime = 'nodejs';
 
 /**
- * GET /finance/invoice/[id]/pdf?tax=0|1
+ * GET /invoicing/invoice/[id]/pdf?tax=0|1
  * Returns the invoice as a PDF document for printing (invoice doc only, not browser screen print).
  */
 export async function GET(

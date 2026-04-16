@@ -6,6 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { updateClient, deleteClient } from './actions';
+import { cn } from '@/lib/utils';
+
+function isValidEmail(v: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+}
 
 export interface ClientRow {
   id: string;
@@ -26,20 +31,28 @@ interface ClientDetailPanelProps {
 
 export function ClientDetailPanel({ client, projectCount, onSuccess, onClose }: ClientDetailPanelProps) {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [name, setName] = useState(client.name);
   const [company, setCompany] = useState(client.company ?? '');
   const [phone, setPhone] = useState(client.phone ?? '');
   const [email, setEmail] = useState(client.email ?? '');
   const [gst, setGst] = useState(client.gst ?? '');
 
+  function clearError(field: string) {
+    if (errors[field]) setErrors((prev) => { const n = { ...prev }; delete n[field]; return n; });
+  }
+
+  function validate(): boolean {
+    const errs: Record<string, string> = {};
+    if (!name.trim()) errs.name = 'Name is required.';
+    if (email.trim() && !isValidEmail(email.trim())) errs.email = 'Enter a valid email address.';
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
-    if (!name.trim()) {
-      setError('Name is required.');
-      return;
-    }
+    if (!validate()) return;
     setLoading(true);
     const result = await updateClient(client.id, {
       name: name.trim(),
@@ -49,10 +62,7 @@ export function ClientDetailPanel({ client, projectCount, onSuccess, onClose }: 
       gst: gst.trim() || null,
     });
     setLoading(false);
-    if (result.error) {
-      setError(result.error);
-      return;
-    }
+    if (result.error) { setErrors({ _form: result.error }); return; }
     onSuccess();
   }
 
@@ -65,8 +75,16 @@ export function ClientDetailPanel({ client, projectCount, onSuccess, onClose }: 
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <Label htmlFor="edit_name" className="mb-1.5 block">Name</Label>
-          <Input id="edit_name" value={name} onChange={(e) => setName(e.target.value)} required />
+          <Label htmlFor="edit_name" className="mb-1.5 block">
+            Name <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="edit_name"
+            value={name}
+            onChange={(e) => { setName(e.target.value); clearError('name'); }}
+            className={cn(errors.name && 'border-destructive')}
+          />
+          {errors.name && <p className="mt-1 text-xs text-destructive">{errors.name}</p>}
         </div>
         <div>
           <Label htmlFor="edit_company" className="mb-1.5 block">Company</Label>
@@ -79,14 +97,21 @@ export function ClientDetailPanel({ client, projectCount, onSuccess, onClose }: 
           </div>
           <div>
             <Label htmlFor="edit_email" className="mb-1.5 block">Email</Label>
-            <Input id="edit_email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <Input
+              id="edit_email"
+              type="email"
+              value={email}
+              onChange={(e) => { setEmail(e.target.value); clearError('email'); }}
+              className={cn(errors.email && 'border-destructive')}
+            />
+            {errors.email && <p className="mt-1 text-xs text-destructive">{errors.email}</p>}
           </div>
         </div>
         <div>
           <Label htmlFor="edit_gst" className="mb-1.5 block">GST</Label>
           <Input id="edit_gst" value={gst} onChange={(e) => setGst(e.target.value)} />
         </div>
-        {error && <p className="text-sm text-red-500">{error}</p>}
+        {errors._form && <p className="text-sm text-destructive">{errors._form}</p>}
         <div className="flex gap-3">
           <Button type="submit" size="sm" disabled={loading}>{loading ? 'Saving…' : 'Save changes'}</Button>
           <Button type="button" variant="outline" size="sm" onClick={onClose}>Cancel</Button>
@@ -99,7 +124,7 @@ export function ClientDetailPanel({ client, projectCount, onSuccess, onClose }: 
             <Link href={`/clients/${client.id}`}>View full profile</Link>
           </Button>
           <Button asChild size="sm">
-            <Link href={`/projects/new?client=${client.id}`}>New project for this client</Link>
+            <Link href={`/projects?client=${client.id}&create=1`}>New project for this client</Link>
           </Button>
           {projectCount > 0 && (
             <Button asChild variant="outline" size="sm">
@@ -121,14 +146,10 @@ export function ClientDetailPanel({ client, projectCount, onSuccess, onClose }: 
             disabled={loading}
             onClick={async () => {
               if (!confirm('Delete this client? This cannot be undone.')) return;
-              setError(null);
               setLoading(true);
               const result = await deleteClient(client.id);
               setLoading(false);
-              if (result.error) {
-                setError(result.error);
-                return;
-              }
+              if (result.error) { setErrors({ _form: result.error }); return; }
               onSuccess();
             }}
           >

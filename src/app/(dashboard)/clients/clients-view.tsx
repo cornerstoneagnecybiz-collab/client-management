@@ -4,9 +4,11 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { SlidePanel } from '@/components/ui/slide-panel';
+import { Modal } from '@/components/ui/modal';
 import { Plus, ChevronRight } from 'lucide-react';
 import { NewClientForm } from './new-client-form';
 import { ClientDetailPanel, type ClientRow } from './client-detail-panel';
+import { useDirtyConfirm } from '@/hooks/use-dirty-confirm';
 
 interface ClientsViewProps {
   initialClients: ClientRow[];
@@ -40,6 +42,8 @@ export function ClientsView({
 
   const selectedClient = detailId ? clients.find((c) => c.id === detailId) : null;
   const selectedProjectCount = selectedClient ? (projectCountByClientId[selectedClient.id] ?? 0) : 0;
+
+  const newClientDirty = useDirtyConfirm(() => setCreateOpen(false));
 
   function refresh() {
     router.refresh();
@@ -114,9 +118,18 @@ export function ClientsView({
         </div>
       </div>
 
-      <SlidePanel open={createOpen} onOpenChange={setCreateOpen} title="New client">
-        <NewClientForm onSuccess={() => { setCreateOpen(false); refresh(); }} onCancel={() => setCreateOpen(false)} />
-      </SlidePanel>
+      <Modal
+        open={createOpen}
+        onOpenChange={newClientDirty.handleOpenChange}
+        title="New client"
+        description="Add a client to start creating projects and invoices."
+      >
+        <NewClientForm
+          onDirtyChange={newClientDirty.setDirty}
+          onSuccess={() => { newClientDirty.closeConfirmed(); refresh(); }}
+          onCancel={() => newClientDirty.handleOpenChange(false)}
+        />
+      </Modal>
 
       <SlidePanel open={!!selectedClient} onOpenChange={(open) => !open && setDetailId(null)} title={selectedClient?.name ?? 'Client'}>
         {selectedClient && (

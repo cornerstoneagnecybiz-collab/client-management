@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { RequirementsView } from './requirements-view';
+import { NextStepBanner } from '@/components/next-step-banner';
 import { projectNameFromRelation, relationNameFromRelation } from '@/lib/utils';
 
 export type RequirementRow = {
@@ -7,9 +8,9 @@ export type RequirementRow = {
   project_id: string;
   project_name: string;
   engagement_type?: 'one_time' | 'monthly';
-  service_catalog_id: string;
   service_name: string;
-  service_code: string;
+  service_category: string | null;
+  pricing_type: string;
   title: string;
   description: string | null;
   delivery: string;
@@ -28,9 +29,9 @@ export type RequirementRow = {
 export default async function RequirementsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ id?: string; project?: string; new?: string; type?: string }>;
+  searchParams: Promise<{ id?: string; project?: string; new?: string; type?: string; vendor?: string }>;
 }) {
-  const { id: openId, project: projectFilter, new: newParam, type: engagementFilter } = await searchParams;
+  const { id: openId, project: projectFilter, new: newParam, type: engagementFilter, vendor: vendorFilter } = await searchParams;
   const supabase = await createClient();
   let projectIdsForType: string[] | null = null;
   if (engagementFilter === 'one_time' || engagementFilter === 'monthly') {
@@ -42,7 +43,9 @@ export default async function RequirementsPage({
     .select(`
       id,
       project_id,
-      service_catalog_id,
+      service_name,
+      service_category,
+      pricing_type,
       title,
       description,
       delivery,
@@ -56,12 +59,14 @@ export default async function RequirementsPage({
       fulfilment_status,
       created_at,
       projects(name, engagement_type),
-      service_catalog(service_name, service_code),
       vendors(name)
     `)
     .order('created_at', { ascending: false });
   if (projectFilter) {
     query = query.eq('project_id', projectFilter);
+  }
+  if (vendorFilter) {
+    query = query.eq('assigned_vendor_id', vendorFilter);
   }
   if (projectIdsForType !== null) {
     if (projectIdsForType.length === 0) query = query.eq('project_id', '00000000-0000-0000-0000-000000000000');
@@ -87,17 +92,9 @@ export default async function RequirementsPage({
       const v = (Array.isArray(proj) ? proj[0]?.engagement_type : proj?.engagement_type) ?? 'one_time';
       return v === 'monthly' ? 'monthly' : 'one_time';
     })(),
-    service_catalog_id: r.service_catalog_id,
-    service_name: (() => {
-      const c = r.service_catalog as unknown as { service_name?: string; service_code?: string } | { service_name?: string; service_code?: string }[] | null;
-      const cat = c == null ? null : Array.isArray(c) ? c[0] : c;
-      return cat?.service_name ?? '—';
-    })(),
-    service_code: (() => {
-      const c = r.service_catalog as unknown as { service_name?: string; service_code?: string } | { service_name?: string; service_code?: string }[] | null;
-      const cat = c == null ? null : Array.isArray(c) ? c[0] : c;
-      return cat?.service_code ?? '';
-    })(),
+    service_name: (r.service_name as string) || '—',
+    service_category: (r.service_category as string | null) ?? null,
+    pricing_type: (r.pricing_type as string) || 'fixed',
     title: r.title,
     description: r.description,
     delivery: (r.delivery as string) || 'vendor',
@@ -113,43 +110,52 @@ export default async function RequirementsPage({
     created_at: r.created_at,
   }));
 
-  const { data: projects } = await supabase.from('projects').select('id, name, engagement_type').order('name');
-  const { data: services } = await supabase
-    .from('service_catalog')
-    .select('id, service_name, service_code, category, service_type, catalog_type, default_client_rate, our_rate_min, delivery')
-    .order('service_name');
-  const { data: vendors } = await supabase.from('vendors').select('id, name').order('name');
+  // Count fulfilled requirements not yet on any issued/paid invoice (for next-step banner)
+  const fulfilledNotInvoiced = requirements.filter((r) => r.fulfilment_status === 'fulfilled');
+  let uninvoicedFulfilledCount = 0;
+  if (fulfilledNotInvoiced.length > 0) {
+    const { data: invoicedLinks } = await supabase
+      .from('invoice_requirements')
+      .select('requirement_id')
+      .in('requirement_id', fulfilledNotInvoiced.map((r) => r.id));
+    const invoicedIds = new Set((invoicedLinks ?? []).map((l) => l.requirement_id));
+    uninvoicedFulfilledCount = fulfilledNotInvoiced.filter((r) => !invoicedIds.has(r.id)).length;
+  }
 
-  const serviceOptionsWithRates =
-    services?.map((s) => {
-      const parts = [s.category, s.service_type, s.catalog_type].filter(Boolean);
-      const description = parts.length > 0 ? parts.join(' · ') : null;
-      return {
-        value: s.id,
-        label: `${s.service_name} (${s.service_code})`,
-        service_name: s.service_name,
-        description: description ?? undefined,
-        default_client_rate: s.default_client_rate ?? null,
-        our_rate_min: s.our_rate_min ?? null,
-        delivery: (s.delivery as 'vendor' | 'in_house') ?? 'vendor',
-      };
-    }) ?? [];
+  const { data: projects } = await supabase.from('projects').select('id, name, engagement_type').order('name');
+  const { data: vendors } = await supabase.from('vendors').select('id, name').order('name');
 
   const engagementFilterLabel =
     engagementFilter === 'monthly' ? 'Monthly retainers' : engagementFilter === 'one_time' ? 'One-time projects' : null;
 
+  const vendorFilterLabel = vendorFilter
+    ? (vendors?.find((v) => v.id === vendorFilter)?.name ?? null)
+    : null;
+
+  const description = vendorFilterLabel
+    ? `Requirements assigned to ${vendorFilterLabel}`
+    : (engagementFilterLabel ?? 'Define services, pricing, and vendor assignments for your projects.');
+
   return (
-    <RequirementsView
-      initialRequirements={requirements}
-      initialOpenId={openId ?? null}
-      initialProjectId={projectFilter ?? null}
-      initialCreateOpen={newParam === '1'}
-      projectOptions={projects?.map((p) => ({ value: p.id, label: p.name, engagement_type: (p.engagement_type as 'one_time' | 'monthly') ?? 'one_time' })) ?? []}
-      serviceOptions={serviceOptionsWithRates}
-      vendorOptions={vendors?.map((v) => ({ value: v.id, label: v.name })) ?? []}
-      title="Requirements"
-      description={engagementFilterLabel ?? 'Catalog items, vendor assignment, and pricing.'}
-      engagementFilter={engagementFilter ?? null}
-    />
+    <div className="space-y-4">
+      {uninvoicedFulfilledCount > 0 && !projectFilter && (
+        <NextStepBanner
+          message={`${uninvoicedFulfilledCount} fulfilled requirement${uninvoicedFulfilledCount !== 1 ? 's' : ''} not yet invoiced.`}
+          ctaLabel="Create invoice"
+          href="/invoicing?new=1"
+        />
+      )}
+      <RequirementsView
+        initialRequirements={requirements}
+        initialOpenId={openId ?? null}
+        initialProjectId={projectFilter ?? null}
+        initialCreateOpen={newParam === '1'}
+        projectOptions={projects?.map((p) => ({ value: p.id, label: p.name, engagement_type: (p.engagement_type as 'one_time' | 'monthly') ?? 'one_time' })) ?? []}
+        vendorOptions={vendors?.map((v) => ({ value: v.id, label: v.name })) ?? []}
+        title="Requirements"
+        description={description}
+        engagementFilter={engagementFilter ?? null}
+      />
+    </div>
   );
 }

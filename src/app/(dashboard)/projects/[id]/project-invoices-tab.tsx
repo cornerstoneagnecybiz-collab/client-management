@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import { SlidePanel } from '@/components/ui/slide-panel';
 import { Plus, ChevronRight } from 'lucide-react';
 import type { InvoiceStatus, InvoiceType } from '@/types';
-import { NewInvoiceForm } from '@/app/(dashboard)/finance/new-invoice-form';
-import { InvoiceDetailPanel, type InvoiceRow, type PaymentRow } from '@/app/(dashboard)/finance/invoice-detail-panel';
+import { NewInvoiceForm } from '@/app/(dashboard)/invoicing/new-invoice-form';
+import { InvoiceDetailPanel, type InvoiceRow, type PaymentRow } from '@/app/(dashboard)/invoicing/invoice-detail-panel';
 
 const STATUS_LABELS: Record<InvoiceStatus, string> = {
   draft: 'Draft',

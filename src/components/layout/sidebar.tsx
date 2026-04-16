@@ -11,27 +11,26 @@ import {
   Users,
   Wallet,
   BookOpen,
-  Package,
   BarChart3,
   Settings,
-  History,
   ScrollText,
+  Handshake,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// Order reflects journey: people & entities → work → money → config
-const nav = [
-  { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/activity', label: 'Activity', icon: History },
-  { href: '/clients', label: 'Clients', icon: Users },
-  { href: '/vendors', label: 'Vendors', icon: Truck },
-  { href: '/projects', label: 'Projects', icon: FolderKanban },
-  { href: '/requirements', label: 'Requirements', icon: ClipboardList },
-  { href: '/fulfilments', label: 'Fulfilments', icon: ListChecks },
-  { href: '/finance', label: 'Finance', icon: Wallet },
+const flowSteps = [
+  { href: '/clients', label: 'Clients', icon: Users, step: 1 },
+  { href: '/vendors', label: 'Vendors', icon: Truck, step: 2 },
+  { href: '/projects', label: 'Projects', icon: FolderKanban, step: 3 },
+  { href: '/requirements', label: 'Requirements', icon: ClipboardList, step: 4 },
+  { href: '/fulfilments', label: 'Fulfilments', icon: ListChecks, step: 5 },
+  { href: '/invoicing', label: 'Invoicing', icon: Wallet, step: 6 },
+  { href: '/settlement', label: 'Settlement', icon: Handshake, step: 7 },
+  { href: '/reports', label: 'Reports', icon: BarChart3, step: 8 },
+];
+
+const secondaryNav = [
   { href: '/ledger', label: 'Ledger', icon: BookOpen },
-  { href: '/catalog', label: 'Catalog', icon: Package },
-  { href: '/reports', label: 'Reports', icon: BarChart3 },
   { href: '/audit', label: 'Audit', icon: ScrollText },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
@@ -52,20 +51,72 @@ export function Sidebar() {
             Cornerstone OS
           </Link>
         </div>
-        <nav className="flex-1 space-y-0.5 p-3">
-          {nav.map((item) => {
-            const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
+
+        <nav className="flex-1 overflow-y-auto p-3 flex flex-col gap-0.5">
+          {/* Dashboard — always top, no step number */}
+          {(() => {
+            const isActive = pathname === '/';
             return (
               <Link
-                key={item.href}
-                href={item.href}
+                href="/"
+                className={cn(
+                  'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors mb-1',
+                  isActive ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                )}
+              >
+                <LayoutDashboard className="h-4 w-4 shrink-0" />
+                Dashboard
+              </Link>
+            );
+          })()}
+
+          {/* Flow label */}
+          <p className="px-3 pt-1 pb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+            Flow
+          </p>
+
+          {/* 8-step flow */}
+          {flowSteps.map(({ href, label, icon: Icon, step }) => {
+            const isActive = pathname === href || pathname.startsWith(href + '/');
+            return (
+              <Link
+                key={href}
+                href={href}
                 className={cn(
                   'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
                   isActive ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                 )}
               >
-                <item.icon className="h-4 w-4 shrink-0" />
-                {item.label}
+                <span className={cn(
+                  'flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold border',
+                  isActive
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'border-border text-muted-foreground/60'
+                )}>
+                  {step}
+                </span>
+                <Icon className="h-4 w-4 shrink-0" />
+                {label}
+              </Link>
+            );
+          })}
+
+          {/* Divider + secondary nav */}
+          <hr className="my-2 border-border" />
+
+          {secondaryNav.map(({ href, label, icon: Icon }) => {
+            const isActive = pathname === href || pathname.startsWith(href + '/');
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={cn(
+                  'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
+                  isActive ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                )}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                {label}
               </Link>
             );
           })}

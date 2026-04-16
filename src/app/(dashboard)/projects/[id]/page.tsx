@@ -1,12 +1,11 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { Button } from '@/components/ui/button';
 import { ProjectTabs } from './project-tabs';
-import { ArrowLeft } from 'lucide-react';
+import { Breadcrumbs } from '@/components/breadcrumbs';
 import { plannedProfit } from '@/types';
 import type { ProjectStatus } from '@/types';
-import type { InvoiceRow, PaymentRow } from '@/app/(dashboard)/finance/page';
+import type { InvoiceRow, PaymentRow } from '@/app/(dashboard)/invoicing/page';
 import type { LedgerEntryRow } from '@/app/(dashboard)/ledger/page';
 import type { ActivityItem } from './project-activity-tab';
 import { projectNameFromRelation, relationNameFromRelation } from '@/lib/utils';
@@ -45,10 +44,9 @@ export default async function ProjectDetailPage({
   const { data: reqRows } = await supabase
     .from('requirements')
     .select(`
-      id, project_id, service_catalog_id, title, description, delivery,
+      id, project_id, service_name, service_category, pricing_type, title, description, delivery,
       assigned_vendor_id, client_price, expected_vendor_cost, quantity, period_days, unit_rate,
       fulfilment_status, created_at,
-      service_catalog(service_name, service_code),
       vendors(name)
     `)
     .eq('project_id', id)
@@ -60,17 +58,9 @@ export default async function ProjectDetailPage({
     project_id: r.project_id,
     project_name: project.name,
     engagement_type: engagementType,
-    service_catalog_id: r.service_catalog_id,
-    service_name: (() => {
-      const c = r.service_catalog as unknown as { service_name?: string; service_code?: string } | { service_name?: string; service_code?: string }[] | null;
-      const cat = c == null ? null : Array.isArray(c) ? c[0] : c;
-      return cat?.service_name ?? '—';
-    })(),
-    service_code: (() => {
-      const c = r.service_catalog as unknown as { service_name?: string; service_code?: string } | { service_name?: string; service_code?: string }[] | null;
-      const cat = c == null ? null : Array.isArray(c) ? c[0] : c;
-      return cat?.service_code ?? '';
-    })(),
+    service_name: (r.service_name as string) || '—',
+    service_category: (r.service_category as string | null) ?? null,
+    pricing_type: (r.pricing_type as string) || 'fixed',
     title: r.title,
     description: r.description,
     delivery: (r.delivery as string) || 'vendor',
@@ -183,7 +173,7 @@ export default async function ProjectDetailPage({
       date: inv.created_at,
       type: 'invoice_created',
       label: `Invoice created (${inv.status}): ${inv.type}`,
-      href: `/finance?id=${inv.id}`,
+      href: `/invoicing?id=${inv.id}`,
       amount: inv.amount,
     });
     if (inv.status === 'issued' && inv.issue_date) {
@@ -192,7 +182,7 @@ export default async function ProjectDetailPage({
         date: inv.issue_date,
         type: 'invoice_issued',
         label: `Invoice issued: ${inv.type}`,
-        href: `/finance?id=${inv.id}`,
+        href: `/invoicing?id=${inv.id}`,
         amount: inv.amount,
       });
     }
@@ -205,7 +195,7 @@ export default async function ProjectDetailPage({
         date: p.date,
         type: 'payment_received',
         label: 'Payment received',
-        href: `/finance?id=${inv.id}`,
+        href: `/invoicing?id=${inv.id}`,
         amount: p.amount,
       });
     }
@@ -216,7 +206,7 @@ export default async function ProjectDetailPage({
       date: po.created_at,
       type: 'payout_recorded',
       label: 'Vendor payout recorded',
-      href: '/finance',
+      href: '/invoicing',
       amount: po.amount,
     });
     if (po.paid_date) {
@@ -225,7 +215,7 @@ export default async function ProjectDetailPage({
         date: po.paid_date,
         type: 'payout_paid',
         label: 'Vendor payout paid',
-        href: '/finance',
+        href: '/invoicing',
         amount: po.amount,
       });
     }
@@ -277,22 +267,16 @@ export default async function ProjectDetailPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href="/projects" aria-label="Back to projects">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-        </Button>
-        <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-semibold tracking-tight truncate">{project.name}</h1>
-          <p className="text-muted-foreground text-sm mt-0.5">
-            {clientName}
-            {' · '}
-            {project.engagement_type === 'monthly' ? 'Monthly retainer' : 'One-time project'}
-            {' · '}
-            {STATUS_LABELS[project.status as ProjectStatus]}
-          </p>
-        </div>
+      <div className="space-y-1">
+        <Breadcrumbs items={[{ label: 'Projects', href: '/projects' }, { label: project.name }]} />
+        <h1 className="text-2xl font-semibold tracking-tight truncate">{project.name}</h1>
+        <p className="text-muted-foreground text-sm">
+          {clientName}
+          {' · '}
+          {project.engagement_type === 'monthly' ? 'Monthly retainer' : 'One-time project'}
+          {' · '}
+          {STATUS_LABELS[project.status as ProjectStatus]}
+        </p>
       </div>
 
       {showAddRequirementCta && (
@@ -309,6 +293,7 @@ export default async function ProjectDetailPage({
         projectName={project.name}
         overview={{
           clientName,
+          clientId: client?.id ?? null,
           engagementType: (project.engagement_type as 'one_time' | 'monthly') ?? 'one_time',
           status: project.status as ProjectStatus,
           startDate: project.start_date,

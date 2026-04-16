@@ -4,18 +4,19 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { SlidePanel } from '@/components/ui/slide-panel';
+import { Modal } from '@/components/ui/modal';
 import { Plus, ChevronRight, MapPin } from 'lucide-react';
 import { NewVendorForm } from './new-vendor-form';
-import { VendorDetailPanel, type VendorRow, type CatalogOption } from './vendor-detail-panel';
+import { VendorDetailPanel, type VendorRow } from './vendor-detail-panel';
 import type { VendorsGroupedByCity } from './page';
 import type { VendorLocationRow } from './page';
+import { useDirtyConfirm } from '@/hooks/use-dirty-confirm';
 
 interface VendorsViewProps {
   initialVendors: VendorRow[];
   initialGroupedByCity: VendorsGroupedByCity;
   initialLocations: VendorLocationRow[];
   requirementCountByVendorId: Record<string, number>;
-  catalogOptions: CatalogOption[];
   existingCategories: string[];
   initialOpenId?: string | null;
   initialCreateOpen?: boolean;
@@ -26,7 +27,6 @@ export function VendorsView({
   initialGroupedByCity,
   initialLocations,
   requirementCountByVendorId,
-  catalogOptions,
   existingCategories,
   initialOpenId,
   initialCreateOpen = false,
@@ -55,6 +55,8 @@ export function VendorsView({
   const selectedVendor = detailId ? vendors.find((v) => v.id === detailId) : null;
   const selectedRequirementCount = selectedVendor ? (requirementCountByVendorId[selectedVendor.id] ?? 0) : 0;
   const selectedVendorLocations = selectedVendor ? locations.filter((l) => l.vendor_id === selectedVendor.id) : [];
+
+  const newVendorDirty = useDirtyConfirm(() => setCreateOpen(false));
 
   function refresh() {
     router.refresh();
@@ -117,7 +119,11 @@ export function VendorsView({
                         }}
                       >
                         <td className="content-cell px-4 font-medium">{row.name}</td>
-                        <td className="content-cell px-4 text-muted-foreground">{row.category ?? '—'}</td>
+                        <td className="content-cell px-4">
+                          {row.categories.length > 0
+                            ? <span className="text-muted-foreground">{row.categories.join(', ')}</span>
+                            : <span className="text-muted-foreground">—</span>}
+                        </td>
                         <td className="content-cell px-4 text-muted-foreground">
                           {[row.phone, row.email].filter(Boolean).join(' · ') || '—'}
                         </td>
@@ -135,13 +141,20 @@ export function VendorsView({
         </div>
       </div>
 
-      <SlidePanel open={createOpen} onOpenChange={setCreateOpen} title="New vendor">
+      <Modal
+        open={createOpen}
+        onOpenChange={newVendorDirty.handleOpenChange}
+        title="New vendor"
+        description="Vendors fulfil requirements. Add categories and a primary location to find them faster."
+        size="md"
+      >
         <NewVendorForm
           existingCategories={existingCategories}
-          onSuccess={() => { setCreateOpen(false); refresh(); }}
-          onCancel={() => setCreateOpen(false)}
+          onDirtyChange={newVendorDirty.setDirty}
+          onSuccess={() => { newVendorDirty.closeConfirmed(); refresh(); }}
+          onCancel={() => newVendorDirty.handleOpenChange(false)}
         />
-      </SlidePanel>
+      </Modal>
 
       <SlidePanel open={!!selectedVendor} onOpenChange={(open) => !open && setDetailId(null)} title={selectedVendor?.name ?? 'Vendor'}>
         {selectedVendor && (
@@ -149,7 +162,7 @@ export function VendorsView({
             vendor={selectedVendor}
             locations={selectedVendorLocations}
             requirementCount={selectedRequirementCount}
-            catalogOptions={catalogOptions}
+            existingCategories={existingCategories}
             onSuccess={() => { refresh(); }}
             onClose={() => setDetailId(null)}
           />

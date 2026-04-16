@@ -1,10 +1,8 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { Button } from '@/components/ui/button';
 import { ClientTabs } from './client-tabs';
-import { ArrowLeft } from 'lucide-react';
-import type { InvoiceRow } from '@/app/(dashboard)/finance/page';
+import { Breadcrumbs } from '@/components/breadcrumbs';
+import type { InvoiceRow } from '@/app/(dashboard)/invoicing/page';
 import type { ActivityEntryRow } from '@/app/(dashboard)/activity/page';
 import type { LedgerEntryType } from '@/types';
 import { projectNameFromRelation } from '@/lib/utils';
@@ -97,18 +95,12 @@ export default async function ClientDetailPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href="/clients" aria-label="Back to clients">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-        </Button>
-        <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-semibold tracking-tight truncate">{client.name}</h1>
-          {client.company && (
-            <p className="text-muted-foreground text-sm mt-0.5">{client.company}</p>
-          )}
-        </div>
+      <div className="space-y-1">
+        <Breadcrumbs items={[{ label: 'Clients', href: '/clients' }, { label: client.name }]} />
+        <h1 className="text-2xl font-semibold tracking-tight truncate">{client.name}</h1>
+        {client.company && (
+          <p className="text-muted-foreground text-sm">{client.company}</p>
+        )}
       </div>
 
       <ClientTabs

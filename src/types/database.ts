@@ -24,11 +24,18 @@ export type LedgerEntryType =
   | 'vendor_expected_cost'
   | 'vendor_payment';
 
-/** Catalog: goods & services = vendor-sourced; consulting = in-house */
-export type CatalogType = 'goods' | 'services' | 'consulting';
-
-/** Who delivers: vendor (goods/services) or in_house (consulting) */
+/** Who delivers: vendor or in_house */
 export type DeliveryType = 'vendor' | 'in_house';
+
+/**
+ * How a requirement is priced:
+ * - fixed: enter total amounts directly
+ * - qty_rate: quantity × unit rate
+ * - days_rate: number of days × daily rate
+ * - qty_days_rate: quantity × days × daily rate (e.g. 3 people × 10 days × ₹5k/day)
+ * - custom: manual total (no formula)
+ */
+export type PricingType = 'fixed' | 'qty_rate' | 'days_rate' | 'qty_days_rate' | 'custom';
 
 // =============================================================================
 // TABLE ROW TYPES
@@ -48,6 +55,7 @@ export interface Vendor {
   id: string;
   name: string;
   category: string | null;
+  categories: string[];
   phone: string | null;
   email: string | null;
   payment_terms: string | null;
@@ -67,28 +75,6 @@ export interface VendorLocation {
   updated_at: string;
 }
 
-export interface CatalogVendorAvailability {
-  id: string;
-  service_catalog_id: string;
-  vendor_id: string;
-  created_at: string;
-}
-
-export interface ServiceCatalog {
-  id: string;
-  service_code: string;
-  category: string | null;
-  service_name: string;
-  service_type: string | null;
-  catalog_type: CatalogType;
-  delivery: DeliveryType;
-  our_rate_min: number | null;
-  our_rate_max: number | null;
-  commission: number | null;
-  default_client_rate: number | null;
-  created_at: string;
-}
-
 export interface Project {
   id: string;
   client_id: string;
@@ -104,7 +90,9 @@ export interface Project {
 export interface Requirement {
   id: string;
   project_id: string;
-  service_catalog_id: string;
+  service_name: string;
+  service_category: string | null;
+  pricing_type: PricingType;
   title: string;
   description: string | null;
   delivery: DeliveryType;

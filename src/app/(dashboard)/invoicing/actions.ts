@@ -54,18 +54,22 @@ export async function getInvoicePrintData(invoiceId: string): Promise<{
   let lineItems: { description: string; type: string; qty: number; rate: number; amount: number }[] = [];
   const type = inv.type as string;
   if (type === 'project' || type === 'milestone' || type === 'monthly') {
-    const { data: reqRows } = await supabase
-      .from('requirements')
-      .select('id, title, client_price, quantity, period_days, unit_rate, service_catalog(service_name, catalog_type)')
-      .eq('project_id', inv.project_id)
-      .eq('fulfilment_status', 'fulfilled');
+    const { data: links } = await supabase
+      .from('invoice_requirements')
+      .select('requirement_id')
+      .eq('invoice_id', invoiceId);
+    const reqIds = (links ?? []).map((l) => l.requirement_id).filter(Boolean);
+    const { data: reqRows } = reqIds.length > 0
+      ? await supabase
+          .from('requirements')
+          .select('id, title, service_name, service_category, client_price, quantity, period_days, unit_rate')
+          .in('id', reqIds)
+      : { data: null };
     if (reqRows && reqRows.length > 0) {
       const isMonthly = type === 'monthly' || engagementType === 'monthly';
       lineItems = reqRows.map((r) => {
-        const raw = r.service_catalog as unknown as { service_name?: string; catalog_type?: string } | { service_name?: string; catalog_type?: string }[] | null;
-        const catalog = raw == null ? null : Array.isArray(raw) ? raw[0] : raw;
-        const serviceName = catalog?.service_name ?? 'Item';
-        const catalogType = (catalog?.catalog_type ?? 'services') as string;
+        const serviceName = (r.service_name as string) || 'Item';
+        const catalogType = ((r.service_category as string) ?? 'Services') as string;
         const amount = r.client_price != null ? Number(r.client_price) : 0;
         if (isMonthly) {
           return {
@@ -196,7 +200,7 @@ export async function syncOverdueInvoices(): Promise<{ updated?: number; error?:
         title: 'Invoice overdue',
         body: 'An invoice has passed its due date.',
         type: 'invoice_overdue',
-        link_href: `/finance/invoice/${row.id}/print`,
+        link_href: `/invoicing/invoice/${row.id}/print`,
         link_label: 'View invoice',
       });
     }

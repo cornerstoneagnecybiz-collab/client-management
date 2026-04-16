@@ -1,32 +1,42 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import * as Select from '@radix-ui/react-select';
-import { Plus, ChevronDown, MapPin } from 'lucide-react';
+import { ModalBody, ModalFooter } from '@/components/ui/modal';
+import { Field, FieldGrid, FormError, FormSection } from '@/components/ui/form-shell';
+import { useToast } from '@/components/ui/toast';
+import { MapPin } from 'lucide-react';
 import { createVendorAction } from './actions';
+import { CategoryTagInput } from './category-tag-input';
+import { cn } from '@/lib/utils';
 
 interface NewVendorFormProps {
   existingCategories: string[];
   onSuccess: () => void;
   onCancel: () => void;
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
-export function NewVendorForm({ existingCategories, onSuccess, onCancel }: NewVendorFormProps) {
+function isValidEmail(v: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+}
+
+export function NewVendorForm({
+  existingCategories,
+  onSuccess,
+  onCancel,
+  onDirtyChange,
+}: NewVendorFormProps) {
+  const toast = useToast();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [name, setName] = useState('');
-  const [category, setCategory] = useState('');
+  const [categories, setCategories] = useState<string[]>([]);
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [paymentTerms, setPaymentTerms] = useState('');
-
-  const [categoriesList, setCategoriesList] = useState<string[]>(() => [...existingCategories].sort());
-  const [showAddCategory, setShowAddCategory] = useState(false);
-  const [newCategoryValue, setNewCategoryValue] = useState('');
 
   const [addLocation, setAddLocation] = useState(false);
   const [locCity, setLocCity] = useState('');
@@ -35,30 +45,38 @@ export function NewVendorForm({ existingCategories, onSuccess, onCancel }: NewVe
   const [locState, setLocState] = useState('');
   const [locPostalCode, setLocPostalCode] = useState('');
 
-  const categoryOptions = useMemo(() => categoriesList.filter(Boolean), [categoriesList]);
+  const isDirty =
+    name.trim().length > 0 ||
+    categories.length > 0 ||
+    phone.trim().length > 0 ||
+    email.trim().length > 0 ||
+    paymentTerms.trim().length > 0 ||
+    addLocation;
 
-  function handleAddCategory() {
-    const v = newCategoryValue.trim();
-    if (!v) return;
-    if (!categoriesList.includes(v)) {
-      setCategoriesList((prev) => [...prev, v].sort());
-    }
-    setCategory(v);
-    setNewCategoryValue('');
-    setShowAddCategory(false);
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
+
+  function clearError(field: string) {
+    if (errors[field]) setErrors((prev) => { const n = { ...prev }; delete n[field]; return n; });
+  }
+
+  function validate(): boolean {
+    const errs: Record<string, string> = {};
+    if (!name.trim()) errs.name = 'Name is required.';
+    if (email.trim() && !isValidEmail(email.trim())) errs.email = 'Enter a valid email address.';
+    if (addLocation && !locCity.trim()) errs.locCity = 'City is required when adding a location.';
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
-    if (!name.trim()) {
-      setError('Name is required.');
-      return;
-    }
+    if (!validate()) return;
     setLoading(true);
     const result = await createVendorAction({
       name: name.trim(),
-      category: category.trim() || null,
+      categories,
       phone: phone.trim() || null,
       email: email.trim() || null,
       payment_terms: paymentTerms.trim() || null,
@@ -75,226 +93,153 @@ export function NewVendorForm({ existingCategories, onSuccess, onCancel }: NewVe
     });
     setLoading(false);
     if (result.error) {
-      setError(result.error);
+      setErrors({ _form: result.error });
+      toast.error('Could not add vendor', result.error);
       return;
     }
+    toast.success('Vendor added', name.trim());
     onSuccess();
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Basic information */}
-      <div className="space-y-4">
-        <h3 className="text-sm font-semibold text-foreground">Basic information</h3>
-        <div>
-          <Label htmlFor="vendor_name" className="mb-1.5 block">
-            Name <span className="text-destructive">*</span>
-          </Label>
-          <Input
-            id="vendor_name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            placeholder="Vendor or company name"
-          />
-        </div>
-
-        <div>
-          <Label className="mb-1.5 block">Category</Label>
-          <div className="flex flex-col gap-2">
-            <Select.Root value={category || undefined} onValueChange={(v) => setCategory(v ?? '')}>
-              <Select.Trigger
-                id="vendor_category"
-                className="flex h-9 w-full items-center justify-between rounded-lg border border-border bg-background px-3 text-sm"
-              >
-                <Select.Value placeholder="Select category (optional)" />
-                <Select.Icon>
-                  <ChevronDown className="h-4 w-4 opacity-50" />
-                </Select.Icon>
-              </Select.Trigger>
-              <Select.Portal>
-                <Select.Content
-                  className="z-[100] max-h-[var(--radix-select-content-available-height)] rounded-xl border border-border bg-card shadow-lg"
-                  position="popper"
-                  sideOffset={4}
-                >
-                  {categoryOptions.length === 0 ? (
-                    <div className="px-3 py-2 text-sm text-muted-foreground">No categories yet. Add one below.</div>
-                  ) : (
-                    categoryOptions.map((c) => (
-                      <Select.Item
-                        key={c}
-                        value={c}
-                        className="flex cursor-default items-center rounded-lg py-2 pl-3 pr-8 text-sm outline-none focus:bg-muted data-[highlighted]:bg-muted"
-                      >
-                        <Select.ItemText>{c}</Select.ItemText>
-                      </Select.Item>
-                    ))
-                  )}
-                </Select.Content>
-              </Select.Portal>
-            </Select.Root>
-            {!showAddCategory ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="w-fit gap-1.5"
-                onClick={() => setShowAddCategory(true)}
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Add category
-              </Button>
-            ) : (
-              <div className="flex gap-2">
-                <Input
-                  placeholder="New category name"
-                  value={newCategoryValue}
-                  onChange={(e) => setNewCategoryValue(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddCategory())}
-                  className="flex-1"
-                  autoFocus
-                />
-                <Button type="button" size="sm" onClick={handleAddCategory} disabled={!newCategoryValue.trim()}>
-                  Add
-                </Button>
-                <Button type="button" variant="ghost" size="sm" onClick={() => setShowAddCategory(false)}>
-                  Cancel
-                </Button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <Label htmlFor="vendor_phone" className="mb-1.5 block">
-              Phone
-            </Label>
+    <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+      <ModalBody className="space-y-6">
+        <FormSection title="Basic information">
+          <Field label="Name" htmlFor="vendor_name" required error={errors.name}>
             <Input
-              id="vendor_phone"
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="Primary contact number"
+              id="vendor_name"
+              value={name}
+              onChange={(e) => { setName(e.target.value); clearError('name'); }}
+              placeholder="Vendor or company name"
+              className={cn(errors.name && 'border-destructive')}
+              autoFocus
             />
-          </div>
-          <div>
-            <Label htmlFor="vendor_email" className="mb-1.5 block">
-              Email
-            </Label>
+          </Field>
+          <Field label="Categories" help="Used to group and search vendors.">
+            <CategoryTagInput
+              value={categories}
+              onChange={setCategories}
+              suggestions={existingCategories}
+            />
+          </Field>
+          <FieldGrid>
+            <Field label="Phone" htmlFor="vendor_phone">
+              <Input
+                id="vendor_phone"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="Primary contact number"
+              />
+            </Field>
+            <Field label="Email" htmlFor="vendor_email" error={errors.email}>
+              <Input
+                id="vendor_email"
+                type="email"
+                value={email}
+                onChange={(e) => { setEmail(e.target.value); clearError('email'); }}
+                placeholder="Primary contact email"
+                className={cn(errors.email && 'border-destructive')}
+              />
+            </Field>
+          </FieldGrid>
+          <Field label="Payment terms" htmlFor="vendor_payment_terms">
             <Input
-              id="vendor_email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Primary contact email"
+              id="vendor_payment_terms"
+              value={paymentTerms}
+              onChange={(e) => setPaymentTerms(e.target.value)}
+              placeholder="e.g. Net 30, 50% advance"
             />
-          </div>
-        </div>
+          </Field>
+        </FormSection>
 
-        <div>
-          <Label htmlFor="vendor_payment_terms" className="mb-1.5 block">
-            Payment terms
-          </Label>
-          <Input
-            id="vendor_payment_terms"
-            value={paymentTerms}
-            onChange={(e) => setPaymentTerms(e.target.value)}
-            placeholder="e.g. Net 30, 50% advance"
-          />
-        </div>
-      </div>
-
-      {/* Primary location (optional) */}
-      <div className="space-y-4 border-t border-border pt-4">
-        <div className="flex items-center gap-2">
-          <MapPin className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-sm font-semibold text-foreground">Primary location (optional)</h3>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Add a location to show this vendor under a city. You can add more locations after saving.
-        </p>
-        <Button
-          type="button"
-          variant={addLocation ? 'secondary' : 'outline'}
-          size="sm"
-          onClick={() => setAddLocation((a) => !a)}
+        <FormSection
+          title="Primary location"
+          description="Add a location to show this vendor under a city. You can add more later."
         >
-          {addLocation ? 'Remove location' : 'Add primary location'}
-        </Button>
-        {addLocation && (
-          <div className="grid gap-4 rounded-lg border border-border bg-muted/20 p-4">
-            <div>
-              <Label htmlFor="loc_city" className="mb-1.5 block">
-                City <span className="text-muted-foreground">(required for location)</span>
-              </Label>
-              <Input
-                id="loc_city"
-                value={locCity}
-                onChange={(e) => setLocCity(e.target.value)}
-                placeholder="e.g. Mumbai"
-              />
-            </div>
-            <div>
-              <Label htmlFor="loc_address1" className="mb-1.5 block">
-                Address line 1
-              </Label>
-              <Input
-                id="loc_address1"
-                value={locAddress1}
-                onChange={(e) => setLocAddress1(e.target.value)}
-                placeholder="Street, building"
-              />
-            </div>
-            <div>
-              <Label htmlFor="loc_address2" className="mb-1.5 block">
-                Address line 2
-              </Label>
-              <Input
-                id="loc_address2"
-                value={locAddress2}
-                onChange={(e) => setLocAddress2(e.target.value)}
-                placeholder="Landmark, suite (optional)"
-              />
-            </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <Label htmlFor="loc_state" className="mb-1.5 block">
-                  State
-                </Label>
-                <Input
-                  id="loc_state"
-                  value={locState}
-                  onChange={(e) => setLocState(e.target.value)}
-                  placeholder="State / region"
-                />
+          {!addLocation ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => { setAddLocation(true); clearError('locCity'); }}
+            >
+              <MapPin className="h-4 w-4" />
+              Add primary location
+            </Button>
+          ) : (
+            <div className="space-y-4 rounded-xl border border-border bg-muted/20 p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-medium text-foreground">
+                  <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                  Location details
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => { setAddLocation(false); clearError('locCity'); }}
+                >
+                  Remove
+                </Button>
               </div>
-              <div>
-                <Label htmlFor="loc_postal" className="mb-1.5 block">
-                  Postal code
-                </Label>
+              <Field label="City" htmlFor="loc_city" required error={errors.locCity}>
                 <Input
-                  id="loc_postal"
-                  value={locPostalCode}
-                  onChange={(e) => setLocPostalCode(e.target.value)}
-                  placeholder="PIN / ZIP"
+                  id="loc_city"
+                  value={locCity}
+                  onChange={(e) => { setLocCity(e.target.value); clearError('locCity'); }}
+                  placeholder="e.g. Mumbai"
+                  className={cn(errors.locCity && 'border-destructive')}
                 />
-              </div>
+              </Field>
+              <Field label="Address line 1" htmlFor="loc_address1">
+                <Input
+                  id="loc_address1"
+                  value={locAddress1}
+                  onChange={(e) => setLocAddress1(e.target.value)}
+                  placeholder="Street, building"
+                />
+              </Field>
+              <Field label="Address line 2" htmlFor="loc_address2">
+                <Input
+                  id="loc_address2"
+                  value={locAddress2}
+                  onChange={(e) => setLocAddress2(e.target.value)}
+                  placeholder="Landmark, suite (optional)"
+                />
+              </Field>
+              <FieldGrid>
+                <Field label="State" htmlFor="loc_state">
+                  <Input
+                    id="loc_state"
+                    value={locState}
+                    onChange={(e) => setLocState(e.target.value)}
+                    placeholder="State / region"
+                  />
+                </Field>
+                <Field label="Postal code" htmlFor="loc_postal">
+                  <Input
+                    id="loc_postal"
+                    value={locPostalCode}
+                    onChange={(e) => setLocPostalCode(e.target.value)}
+                    placeholder="PIN / ZIP"
+                  />
+                </Field>
+              </FieldGrid>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </FormSection>
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
-      <div className="flex gap-3 border-t border-border pt-4">
+        <FormError message={errors._form} />
+      </ModalBody>
+      <ModalFooter>
+        <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
+          Cancel
+        </Button>
         <Button type="submit" disabled={loading}>
           {loading ? 'Adding…' : 'Add vendor'}
         </Button>
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
-      </div>
+      </ModalFooter>
     </form>
   );
 }

@@ -71,7 +71,7 @@ export function InvoicePrintLayout({
             : 'bg-zinc-50 text-zinc-600 border-zinc-200';
 
   // Print = open invoice PDF (dedicated doc for printing, not browser screen print)
-  const pdfUrl = `/finance/invoice/${invoice.id}/pdf${taxToggle ? '?tax=1' : ''}`;
+  const pdfUrl = `/invoicing/invoice/${invoice.id}/pdf${taxToggle ? '?tax=1' : ''}`;
 
   return (
     <div className="min-h-screen bg-white text-black print:bg-white">
@@ -79,7 +79,7 @@ export function InvoicePrintLayout({
       <div className="sticky top-0 z-50 flex items-center justify-between border-b border-border bg-muted/30 px-4 py-3 print:hidden">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" asChild>
-            <Link href="/finance">
+            <Link href="/invoicing">
               <ArrowLeft className="h-4 w-4" />
               Back to Finance
             </Link>
@@ -95,7 +95,7 @@ export function InvoicePrintLayout({
             </a>
           </Button>
           <Button size="sm" variant="outline" className="gap-2" asChild>
-            <a href={`/finance/invoice/${invoice.id}/export/excel`} download={`${invoiceNumber}.xlsx`}>
+            <a href={`/invoicing/invoice/${invoice.id}/export/excel`} download={`${invoiceNumber}.xlsx`}>
               <FileSpreadsheet className="h-4 w-4" />
               Download Excel
             </a>
@@ -104,14 +104,14 @@ export function InvoicePrintLayout({
         <div className="flex items-center gap-2 text-sm">
           <span className="text-muted-foreground">Show as:</span>
           <Link
-            href={`/finance/invoice/${invoice.id}/print?tax=1`}
+            href={`/invoicing/invoice/${invoice.id}/print?tax=1`}
             className={taxToggle ? 'font-medium text-foreground' : 'text-muted-foreground hover:underline'}
           >
             Tax invoice
           </Link>
           <span>|</span>
           <Link
-            href={`/finance/invoice/${invoice.id}/print`}
+            href={`/invoicing/invoice/${invoice.id}/print`}
             className={!taxToggle ? 'font-medium text-foreground' : 'text-muted-foreground hover:underline'}
           >
             Standard invoice

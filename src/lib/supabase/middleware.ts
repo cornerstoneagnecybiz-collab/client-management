@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { getSupabasePublishableKey, getSupabaseUrl } from './env';
 
-const dashboardPaths = ['/', '/activity', '/projects', '/requirements', '/fulfilments', '/vendors', '/clients', '/finance', '/ledger', '/catalog', '/reports', '/audit', '/settings'];
+const dashboardPaths = ['/', '/activity', '/projects', '/requirements', '/fulfilments', '/vendors', '/clients', '/invoicing', '/settlement', '/ledger', '/reports', '/audit', '/settings'];
 
 function isDashboardPath(pathname: string): boolean {
   if (pathname === '/') return true;

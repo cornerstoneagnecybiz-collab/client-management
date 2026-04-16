@@ -424,8 +424,8 @@ export function AnalyticsView({ data }: { data: AnalyticsData }) {
                 </div>
               </>
             )}
-            <Link href="/finance" className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
-              View finance <ChevronRight className="h-4 w-4" />
+            <Link href="/invoicing" className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+              View invoicing <ChevronRight className="h-4 w-4" />
             </Link>
           </div>
         </section>

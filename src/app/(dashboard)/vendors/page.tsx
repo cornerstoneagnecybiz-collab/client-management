@@ -4,7 +4,7 @@ import { VendorsView } from './vendors-view';
 export type VendorRow = {
   id: string;
   name: string;
-  category: string | null;
+  categories: string[];
   phone: string | null;
   email: string | null;
   payment_terms: string | null;
@@ -34,7 +34,7 @@ export default async function VendorsPage({
 
   const { data: rows, error } = await supabase
     .from('vendors')
-    .select('id, name, category, phone, email, payment_terms, created_at')
+    .select('id, name, categories, phone, email, payment_terms, created_at')
     .order('name');
 
   if (error) {
@@ -49,7 +49,7 @@ export default async function VendorsPage({
   const vendors: VendorRow[] = (rows ?? []).map((r) => ({
     id: r.id,
     name: r.name,
-    category: r.category,
+    categories: (r.categories as string[] | null) ?? [],
     phone: r.phone,
     email: r.email,
     payment_terms: r.payment_terms,
@@ -103,17 +103,7 @@ export default async function VendorsPage({
     requirementCountByVendorId[vid] = (requirementCountByVendorId[vid] ?? 0) + 1;
   }
 
-  const { data: catalogRows } = await supabase
-    .from('service_catalog')
-    .select('id, service_code, service_name, catalog_type')
-    .order('service_code');
-  const catalogOptions = (catalogRows ?? []).map((r) => ({
-    value: r.id,
-    label: `${r.service_name} (${r.service_code})`,
-    catalog_type: (r.catalog_type as string) ?? 'services',
-  }));
-
-  const existingCategories = [...new Set(vendors.map((v) => v.category).filter(Boolean))].sort() as string[];
+  const existingCategories = [...new Set(vendors.flatMap((v) => v.categories))].sort();
 
   return (
     <VendorsView
@@ -121,7 +111,6 @@ export default async function VendorsPage({
       initialGroupedByCity={groupedByCity}
       initialLocations={locations}
       requirementCountByVendorId={requirementCountByVendorId}
-      catalogOptions={catalogOptions}
       existingCategories={existingCategories}
       initialOpenId={openId ?? null}
       initialCreateOpen={openNew === '1'}

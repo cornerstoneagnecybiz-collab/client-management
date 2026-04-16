@@ -1,8 +1,9 @@
 import { createClient } from '@/lib/supabase/server';
-import { FinanceView } from './finance-view';
+import { InvoicingView } from './invoicing-view';
+import { NextStepBanner } from '@/components/next-step-banner';
 import type { InvoiceType, InvoiceStatus } from '@/types';
 import type { VendorPayoutStatus } from '@/types';
-import { projectNameFromRelation, relationNameFromRelation } from '@/lib/utils';
+import { projectNameFromRelation } from '@/lib/utils';
 
 export type InvoiceRow = {
   id: string;
@@ -37,7 +38,7 @@ export type VendorPayoutRow = {
   vendor_name: string;
 };
 
-export default async function FinancePage({
+export default async function InvoicingPage({
   searchParams,
 }: {
   searchParams: Promise<{ id?: string; project?: string; type?: string; showCancelled?: string; new?: string }>;
@@ -69,7 +70,7 @@ export default async function FinancePage({
   if (invError) {
     return (
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Finance</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Invoicing</h1>
         <p className="mt-2 text-sm text-red-500">Failed to load invoices: {invError.message}</p>
       </div>
     );
@@ -101,58 +102,6 @@ export default async function FinancePage({
 
   const { data: projects } = await supabase.from('projects').select('id, name, engagement_type').order('name');
 
-  const { data: payoutRows } = await supabase
-    .from('vendor_payouts')
-    .select(`
-      id, requirement_id, vendor_id, amount, status, paid_date,
-      requirements(service_catalog(service_name), projects(name)),
-      vendors(name)
-    `)
-    .order('created_at', { ascending: false });
-
-  const vendorPayouts: VendorPayoutRow[] = (payoutRows ?? []).map((r) => {
-    const rawReq = r.requirements as unknown as { service_catalog?: { service_name?: string } | { service_name?: string }[] | null; projects?: unknown } | { service_catalog?: { service_name?: string } | { service_name?: string }[] | null; projects?: unknown }[] | null;
-    const req = rawReq == null ? null : Array.isArray(rawReq) ? rawReq[0] : rawReq;
-    const catalog = req?.service_catalog;
-    const serviceName = (catalog && !Array.isArray(catalog) ? catalog.service_name : (Array.isArray(catalog) ? catalog[0]?.service_name : undefined)) ?? '—';
-    const projectName = projectNameFromRelation(req?.projects);
-    const vendorName = relationNameFromRelation(r.vendors);
-    return {
-      id: r.id,
-      requirement_id: r.requirement_id,
-      vendor_id: r.vendor_id,
-      amount: r.amount,
-      status: r.status as VendorPayoutStatus,
-      paid_date: r.paid_date,
-      service_name: serviceName,
-      project_name: projectName,
-      vendor_name: vendorName,
-    };
-  });
-
-  const { data: reqList } = await supabase
-    .from('requirements')
-    .select('id, title, expected_vendor_cost, quantity, period_days, projects(name, engagement_type), service_catalog(service_name)')
-    .order('created_at', { ascending: false });
-
-  const requirementOptions =
-    reqList?.map((r) => {
-      const pName = projectNameFromRelation(r.projects, '');
-      const catalog = r.service_catalog as unknown as { service_name?: string } | { service_name?: string }[] | null;
-      const sName = (catalog == null ? '' : Array.isArray(catalog) ? catalog[0]?.service_name : catalog?.service_name) ?? '';
-      const proj = r.projects as unknown as { engagement_type?: string } | { engagement_type?: string }[] | null;
-      const engagementType = (Array.isArray(proj) ? proj[0]?.engagement_type : proj?.engagement_type) ?? 'one_time';
-      const qtyPeriod =
-        engagementType === 'one_time' && (r.quantity != null || r.period_days != null)
-          ? ` · ${[r.quantity != null && r.quantity > 0 ? `Qty ${r.quantity}` : null, r.period_days != null && r.period_days > 0 ? `${r.period_days} days` : null].filter(Boolean).join(' × ')}`
-          : '';
-      const label = `${pName} · ${sName}${r.title && r.title !== sName ? ` — ${r.title}` : ''}${qtyPeriod}`;
-      return { value: r.id, label, expected_vendor_cost: r.expected_vendor_cost ?? null };
-    }) ?? [];
-
-  const { data: vendors } = await supabase.from('vendors').select('id, name').order('name');
-  const vendorOptions = vendors?.map((v) => ({ value: v.id, label: v.name })) ?? [];
-
   let projectFilterLabel: string | null = null;
   if (projectFilter && projects?.length) {
     const p = projects.find((x) => x.id === projectFilter);
@@ -165,8 +114,26 @@ export default async function FinancePage({
         ? 'Project & milestone invoices'
         : null;
 
+  // Banner: issued/overdue invoices with unpaid balance → settlement
+  const pendingCollectTotal = invoices
+    .filter((inv) => inv.status === 'issued' || inv.status === 'overdue')
+    .reduce((sum, inv) => {
+      const paid = (paymentsByInvoiceId[inv.id] ?? []).reduce((s, p) => s + p.amount, 0);
+      return sum + Math.max(0, inv.amount - paid);
+    }, 0);
+  const formatMoney = (n: number) =>
+    new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
+
   return (
-    <FinanceView
+    <div className="space-y-4">
+      {pendingCollectTotal > 0 && !projectFilter && !invoiceTypeFilter && (
+        <NextStepBanner
+          message={`${formatMoney(pendingCollectTotal)} pending collection.`}
+          ctaLabel="Settle now"
+          href="/settlement"
+        />
+      )}
+      <InvoicingView
       initialInvoices={invoices}
       paymentsByInvoiceId={paymentsByInvoiceId}
       projectOptions={projects?.map((p) => ({ value: p.id, label: p.name, engagement_type: (p.engagement_type as 'one_time' | 'monthly') ?? 'one_time' })) ?? []}
@@ -177,9 +144,7 @@ export default async function FinancePage({
       invoiceTypeFilter={invoiceTypeFilter ?? null}
       invoiceTypeFilterLabel={invoiceTypeFilterLabel}
       showCancelled={showCancelled}
-      vendorPayouts={vendorPayouts}
-      requirementOptions={requirementOptions}
-      vendorOptions={vendorOptions}
-    />
+      />
+    </div>
   );
 }

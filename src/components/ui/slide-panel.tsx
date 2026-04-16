@@ -10,11 +10,26 @@ interface SlidePanelProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
+  description?: string;
   children: React.ReactNode;
   className?: string;
+  /**
+   * - `default` (legacy): wraps children in a padded, scrollable body.
+   * - `form`: renders children directly so they can use `<ModalBody>`/`<ModalFooter>`
+   *   to get a sticky footer with scrollable content above it.
+   */
+  variant?: 'default' | 'form';
 }
 
-export function SlidePanel({ open, onOpenChange, title, children, className }: SlidePanelProps) {
+export function SlidePanel({
+  open,
+  onOpenChange,
+  title,
+  description,
+  children,
+  className,
+  variant = 'default',
+}: SlidePanelProps) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
@@ -27,17 +42,29 @@ export function SlidePanel({ open, onOpenChange, title, children, className }: S
           )}
           aria-describedby={undefined}
         >
-          <Dialog.Title className="sr-only">{title}</Dialog.Title>
           <div className="flex h-full flex-col">
-            <div className="flex items-center justify-between border-b border-border px-4 py-3">
-              <h2 className="text-lg font-semibold">{title}</h2>
+            <div className="flex items-start justify-between gap-4 border-b border-border px-4 py-3">
+              <div className="min-w-0">
+                <Dialog.Title className="text-base font-semibold leading-tight">
+                  {title}
+                </Dialog.Title>
+                {description && (
+                  <Dialog.Description className="mt-0.5 text-xs text-muted-foreground">
+                    {description}
+                  </Dialog.Description>
+                )}
+              </div>
               <Dialog.Close asChild>
-                <Button variant="ghost" size="icon" aria-label="Close panel">
+                <Button variant="ghost" size="icon" aria-label="Close panel" className="-mr-1 h-8 w-8">
                   <X className="h-4 w-4" />
                 </Button>
               </Dialog.Close>
             </div>
-            <div className="flex-1 overflow-y-auto p-4">{children}</div>
+            {variant === 'form' ? (
+              children
+            ) : (
+              <div className="flex-1 overflow-y-auto p-4">{children}</div>
+            )}
           </div>
         </Dialog.Content>
       </Dialog.Portal>
