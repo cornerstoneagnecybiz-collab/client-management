@@ -52,7 +52,11 @@ export default async function DashboardPage() {
           <InvoiceAging aging={data.aging} />
         </div>
         <div className="col-span-12 md:col-span-6 lg:col-span-5">
-          <PendingPayouts items={data.pendingPayoutsTop} />
+          <PendingPayouts
+            items={data.pendingPayoutsTop}
+            totalCount={data.payTotalCount}
+            totalAmount={data.pendingPayTotal}
+          />
         </div>
         <div className="col-span-12 md:col-span-12 lg:col-span-3">
           <RecentActivity items={data.recentActivity} />

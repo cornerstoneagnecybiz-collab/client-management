@@ -1,6 +1,18 @@
 // src/app/(dashboard)/dashboard/_lib/calc.ts
 import type { Invoice, LedgerEntry, PaymentReceived, Project, Requirement, VendorPayout } from '@/types/database';
-import type { AgingBuckets, FunnelStage, KpiValue, NextStep, PendingCash, VariancePortfolio, WeekBucket } from './types';
+import type {
+  ActivityItem,
+  AgingBuckets,
+  CollectItem,
+  FulfilItem,
+  FunnelStage,
+  KpiValue,
+  NextStep,
+  PayItem,
+  PendingCash,
+  VariancePortfolio,
+  WeekBucket,
+} from './types';
 
 const DAY_MS = 86_400_000;
 
@@ -138,7 +150,15 @@ function daysBetween(fromIso: string, now: Date): number {
   return Math.floor((nowMs - from) / DAY_MS);
 }
 
-function outstandingByInvoice(invoices: Invoice[], payments: PaymentReceived[]): Map<string, number> {
+/**
+ * Returns a Map of `invoiceId -> outstanding INR` for every invoice whose status
+ * is 'issued' or 'overdue' AND whose remaining balance is strictly positive.
+ * Fully-paid and non-billable invoices are excluded.
+ */
+export function outstandingByInvoice(
+  invoices: Invoice[],
+  payments: PaymentReceived[],
+): Map<string, number> {
   const paidMap = new Map<string, number>();
   for (const p of payments) {
     paidMap.set(p.invoice_id, (paidMap.get(p.invoice_id) ?? 0) + p.amount);
@@ -156,8 +176,8 @@ function outstandingByInvoice(invoices: Invoice[], payments: PaymentReceived[]):
 export function computeAging(
   invoices: Invoice[],
   payments: PaymentReceived[],
-  /** Reserved for future use (invoice-client join); kept for API stability. */
-  _clientNameByInvoiceId: Array<{ id: string; clientName: string }>,
+  /** `invoiceId -> clientName` for the "oldest open" callout. Missing entries fall back to "—". */
+  clientNameByInvoiceId: Array<{ id: string; clientName: string }>,
   now: Date,
 ): AgingBuckets {
   const outstanding = outstandingByInvoice(invoices, payments);
@@ -172,7 +192,10 @@ export function computeAging(
   for (const inv of invoices) {
     const due = outstanding.get(inv.id);
     if (!due) continue;
-    const days = inv.issue_date ? daysBetween(inv.issue_date, now) : 0;
+    // Drop invoices with no issue_date (data hygiene issue) rather than
+    // silently treating them as 0 days old — they would skew `oldestOpen`.
+    if (!inv.issue_date) continue;
+    const days = daysBetween(inv.issue_date, now);
     if (days <= 30) {
       buckets.current.amount += due;
       buckets.current.count += 1;
@@ -187,12 +210,13 @@ export function computeAging(
     if (!oldest || days > oldest.days) oldest = { inv, days };
   }
   if (oldest) {
-    const lookup = _clientNameByInvoiceId.find((x) => x.id === oldest!.inv.id);
+    const { inv, days } = oldest;
+    const lookup = clientNameByInvoiceId.find((x) => x.id === inv.id);
     buckets.oldestOpen = {
-      invoiceId: oldest.inv.id,
-      label: `INV-${oldest.inv.id.slice(0, 8)}`,
+      invoiceId: inv.id,
+      label: `INV-${inv.id.slice(0, 8)}`,
       clientName: lookup?.clientName ?? '—',
-      daysOld: oldest.days,
+      daysOld: days,
     };
   }
   return buckets;
@@ -235,10 +259,15 @@ export function computeNextStep(counts: {
   return null;
 }
 
+/**
+ * Portfolio variance = (actual - planned) / |planned| * 100, across active projects.
+ * `ledger` should cover the full lifetime of the active projects (not just a recent
+ * window) so historical client/vendor payments flow into `actual`.
+ */
 export function computePortfolioVariance(
   projects: Project[],
   requirements: Requirement[],
-  ledger: LedgerEntry[],
+  ledger: Pick<LedgerEntry, 'project_id' | 'type' | 'amount'>[],
 ): VariancePortfolio {
   const activeIds = new Set(projects.filter((p) => p.status === 'active').map((p) => p.id));
   if (activeIds.size === 0) return { variancePct: null, favourable: true };
@@ -272,22 +301,157 @@ export interface FunnelInput {
   pendingPayouts: number;
 }
 
+/**
+ * Sidebar pipeline funnel. Returns stages in the same order as the left nav.
+ *
+ * The original spec describes an 8-stage flow (Fulfilments + Invoicing as
+ * separate steps). Those two have since been merged into a single `Billing`
+ * step (see `docs/superpowers/specs/2026-04-17-billing-merge-design.md`)
+ * because both represent "work that hasn't yet been billed or collected" and
+ * were being used as one mental unit in practice. If that merge is ever
+ * reverted, add the two stages back here and the header copy in
+ * `pipeline-pulse.tsx` will auto-update (it reads `stages.length`).
+ */
 export function buildFunnel(input: FunnelInput): FunnelStage[] {
+  const billingCount = input.openRequirements + input.unpaidInvoices;
   const stages: FunnelStage[] = [
     { step: 1, label: 'Clients',      count: input.clients,          isBottleneck: false, href: '/clients' },
     { step: 2, label: 'Vendors',      count: input.vendors,          isBottleneck: false, href: '/vendors' },
     { step: 3, label: 'Projects',     count: input.projects,         isBottleneck: false, href: '/projects' },
     { step: 4, label: 'Requirements', count: input.requirements,     isBottleneck: false, href: '/requirements' },
-    { step: 5, label: 'Fulfilments',  count: input.openRequirements, isBottleneck: false, href: '/fulfilments' },
-    { step: 6, label: 'Invoicing',    count: input.unpaidInvoices,   isBottleneck: false, href: '/invoicing' },
-    { step: 7, label: 'Settlement',   count: input.pendingPayouts,   isBottleneck: false, href: '/settlement' },
-    { step: 8, label: 'Reports',      count: null,                   isBottleneck: false, href: '/reports' },
+    { step: 5, label: 'Billing',      count: billingCount,           isBottleneck: false, href: '/billing' },
+    { step: 6, label: 'Settlement',   count: input.pendingPayouts,   isBottleneck: false, href: '/settlement' },
+    { step: 7, label: 'Reports',      count: null,                   isBottleneck: false, href: '/reports' },
   ];
-  const pendingStages = [stages[4], stages[5], stages[6]];
+  const pendingStages = [stages[4], stages[5]];
   const top = pendingStages.reduce<FunnelStage | null>(
     (acc, s) => ((s.count ?? 0) > (acc?.count ?? 0) ? s : acc),
     null,
   );
   if (top && (top.count ?? 0) > 0) top.isBottleneck = true;
   return stages;
+}
+
+export interface InvoiceDisplayName {
+  clientName: string;
+  projectName: string;
+}
+
+export interface PayoutDisplayName {
+  vendorName: string;
+  projectName: string;
+}
+
+export interface RequirementDisplayName {
+  projectName: string;
+  vendorName: string | null;
+}
+
+/**
+ * Whole days from `fromIso` (UTC midnight) to `now` (UTC midnight).
+ * Positive means `now` is after `fromIso`. Null if `fromIso` is null.
+ */
+function daysBetweenOrNull(fromIso: string | null, now: Date): number | null {
+  if (!fromIso) return null;
+  const from = new Date(`${fromIso}T00:00:00Z`).getTime();
+  const n = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  return Math.floor((n - from) / DAY_MS);
+}
+
+/**
+ * Builds the "Collect" queue: outstanding invoices with amount due, overdue
+ * status, and display names. Sorted by days-overdue desc, then amount desc.
+ */
+export function buildCollectItems(
+  invoices: Invoice[],
+  payments: PaymentReceived[],
+  displayNames: Map<string, InvoiceDisplayName>,
+  now: Date,
+): CollectItem[] {
+  const outstanding = outstandingByInvoice(invoices, payments);
+  return invoices
+    .filter((i) => outstanding.has(i.id))
+    .map<CollectItem>((i) => {
+      const dueDelta = daysBetweenOrNull(i.due_date, now);
+      const names = displayNames.get(i.id);
+      return {
+        invoice: i,
+        clientName: names?.clientName ?? '—',
+        projectName: names?.projectName ?? '—',
+        amountDue: outstanding.get(i.id) ?? 0,
+        daysOverdue: dueDelta != null && dueDelta > 0 ? dueDelta : null,
+        daysUntilDue: dueDelta != null && dueDelta <= 0 ? -dueDelta : null,
+      };
+    })
+    .sort(
+      (a, b) => (b.daysOverdue ?? -1) - (a.daysOverdue ?? -1) || b.amountDue - a.amountDue,
+    );
+}
+
+/**
+ * Builds the "Pay" queue: pending vendor payouts sorted by amount desc.
+ * `VendorPayout` has no due date in the schema today, so overdue cannot be
+ * computed — see `docs/superpowers/specs/2026-04-17-dashboard-redesign-design.md`.
+ */
+export function buildPayItems(
+  payouts: VendorPayout[],
+  displayNames: Map<string, PayoutDisplayName>,
+): PayItem[] {
+  return payouts
+    .filter((p) => p.status === 'pending')
+    .map<PayItem>((p) => {
+      const names = displayNames.get(p.id);
+      return {
+        payout: p,
+        vendorName: names?.vendorName ?? '—',
+        projectName: names?.projectName ?? '—',
+        daysUntilDue: null,
+        daysOverdue: null,
+      };
+    })
+    .sort((a, b) => b.payout.amount - a.payout.amount);
+}
+
+/**
+ * Builds the "Fulfil" queue: open requirements (pending or in_progress),
+ * sorted by days open desc.
+ */
+export function buildFulfilItems(
+  requirements: Requirement[],
+  displayNames: Map<string, RequirementDisplayName>,
+  now: Date,
+): FulfilItem[] {
+  return requirements
+    .filter((r) => r.fulfilment_status === 'pending' || r.fulfilment_status === 'in_progress')
+    .map<FulfilItem>((r) => {
+      const names = displayNames.get(r.id);
+      return {
+        requirement: r,
+        projectName: names?.projectName ?? '—',
+        vendorName: names?.vendorName ?? null,
+        daysOpen: daysBetweenOrNull(r.created_at.slice(0, 10), now) ?? 0,
+      };
+    })
+    .sort((a, b) => b.daysOpen - a.daysOpen);
+}
+
+/**
+ * Returns the most recent N ledger entries, newest first. Sort keys are
+ * `date` (YYYY-MM-DD) then `created_at` ISO timestamp as a tiebreaker.
+ */
+export function buildRecentActivity(
+  ledger: LedgerEntry[],
+  projectNameById: Map<string, string>,
+  limit: number,
+): ActivityItem[] {
+  return [...ledger]
+    .sort((a, b) => b.date.localeCompare(a.date) || b.created_at.localeCompare(a.created_at))
+    .slice(0, limit)
+    .map<ActivityItem>((e) => ({
+      id: e.id,
+      type: e.type,
+      amount: e.amount,
+      projectName: projectNameById.get(e.project_id) ?? '—',
+      at: e.created_at,
+    }));
 }

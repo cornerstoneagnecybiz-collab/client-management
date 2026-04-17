@@ -13,7 +13,7 @@ export function PipelinePulse({ stages }: { stages: FunnelStage[] }) {
         <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
           Pipeline pulse
         </div>
-        <span className="text-[11px] text-muted-foreground/70">8-step flow</span>
+        <span className="text-[11px] text-muted-foreground/70">{stages.length}-step flow</span>
       </header>
       <ul className="space-y-1">
         {stages.map((s) => {

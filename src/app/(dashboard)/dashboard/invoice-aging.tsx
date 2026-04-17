@@ -33,7 +33,7 @@ export function InvoiceAging({ aging }: { aging: AgingBuckets }) {
       <div className="mt-3 grid grid-cols-3 gap-3 text-[11px] text-muted-foreground">
         <div>0–30d<br /><span className="tabular-nums text-foreground font-semibold">{formatINR(aging.current.amount)}</span> <span className="text-muted-foreground/70">({aging.current.count})</span></div>
         <div>31–60d<br /><span className="tabular-nums text-foreground font-semibold">{formatINR(aging.stale.amount)}</span> <span className="text-muted-foreground/70">({aging.stale.count})</span></div>
-        <div>60+d<br /><span className="tabular-nums text-rose-400 font-semibold">{formatINR(aging.overdue.amount)}</span> <span className="text-muted-foreground/70">({aging.overdue.count})</span></div>
+        <div>61+d<br /><span className="tabular-nums text-rose-400 font-semibold">{formatINR(aging.overdue.amount)}</span> <span className="text-muted-foreground/70">({aging.overdue.count})</span></div>
       </div>
       {aging.oldestOpen && (
         <p className="mt-4 text-[11px] text-muted-foreground">
@@ -42,7 +42,7 @@ export function InvoiceAging({ aging }: { aging: AgingBuckets }) {
             {aging.oldestOpen.label} · {aging.oldestOpen.clientName}
           </span>{' '}
           · {aging.oldestOpen.daysOld} days ·{' '}
-          <Link href="/invoicing" className="text-primary hover:underline">Nudge client</Link>
+          <Link href="/billing" className="text-primary hover:underline">Nudge client</Link>
         </p>
       )}
     </section>

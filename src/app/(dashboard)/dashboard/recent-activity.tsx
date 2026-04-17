@@ -7,6 +7,8 @@ function formatINR(n: number): string {
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
 }
 
+// Safe to call `Date.now()` at render time: this is a Server Component on a
+// `force-dynamic` route, so there is no client-side hydration to mismatch with.
 function relativeTime(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
   const min = Math.floor(ms / 60000);

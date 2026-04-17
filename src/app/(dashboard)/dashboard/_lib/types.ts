@@ -13,9 +13,12 @@ export interface WeekBucket {
 
 export interface KpiValue {
   value: number;
-  /** % change vs same day-of-month last month; null if prior period has no data. */
+  /**
+   * % change vs same day-of-month previous month. Null when the prior period
+   * is zero (percentage change is undefined) — treated as "no comparable baseline".
+   */
   deltaPct: number | null;
-  /** Last N points for the sparkline (daily cumulative MTD). */
+  /** Daily cumulative MTD values, one per day-of-month through today. */
   sparkline: number[];
 }
 
@@ -62,11 +65,11 @@ export interface FunnelStage {
 }
 
 export interface AgingBuckets {
-  /** 0-30 day bucket (amount, count) */
+  /** 0–30 days since issue (inclusive). */
   current: { amount: number; count: number };
-  /** 31-60 day bucket */
+  /** 31–60 days since issue (inclusive). */
   stale: { amount: number; count: number };
-  /** 60+ day bucket */
+  /** 61+ days since issue. */
   overdue: { amount: number; count: number };
   total: number;
   oldestOpen: {
@@ -111,9 +114,11 @@ export interface DashboardData {
   collectTotalCount: number;
   payTotalCount: number;
   fulfilTotalCount: number;
-  funnel: FunnelStage[]; // 8 stages in sidebar order
+  funnel: FunnelStage[]; // 7 stages in sidebar order
   aging: AgingBuckets;
   pendingPayoutsTop: PayItem[]; // top 3 (subset of `pay`)
+  /** Total INR across ALL pending payouts (not just the top 3 shown). */
+  pendingPayTotal: number;
   recentActivity: ActivityItem[]; // last 4
   variance: VariancePortfolio;
 }

@@ -1,7 +1,7 @@
 // src/app/(dashboard)/dashboard/action-queue.tsx
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState, type KeyboardEvent } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Check } from 'lucide-react';
 import type { CollectItem, FulfilItem, PayItem } from './_lib/types';
@@ -22,12 +22,31 @@ interface Props {
   fulfilCount: number;
 }
 
+const TAB_ORDER: Tab[] = ['collect', 'pay', 'fulfil'];
+
 export function ActionQueue(p: Props) {
   const defaultTab: Tab =
     p.collectCount > 0 ? 'collect' :
     p.payCount > 0 ? 'pay' :
     p.fulfilCount > 0 ? 'fulfil' : 'collect';
   const [tab, setTab] = useState<Tab>(defaultTab);
+  const tabRefs = useRef<Record<Tab, HTMLButtonElement | null>>({
+    collect: null, pay: null, fulfil: null,
+  });
+
+  function onKey(e: KeyboardEvent<HTMLDivElement>) {
+    const i = TAB_ORDER.indexOf(tab);
+    let next: Tab | null = null;
+    if (e.key === 'ArrowRight') next = TAB_ORDER[(i + 1) % TAB_ORDER.length];
+    else if (e.key === 'ArrowLeft') next = TAB_ORDER[(i - 1 + TAB_ORDER.length) % TAB_ORDER.length];
+    else if (e.key === 'Home') next = TAB_ORDER[0];
+    else if (e.key === 'End') next = TAB_ORDER[TAB_ORDER.length - 1];
+    if (next) {
+      e.preventDefault();
+      setTab(next);
+      tabRefs.current[next]?.focus();
+    }
+  }
 
   return (
     <section className="rounded-2xl border border-border bg-card/60 p-5 backdrop-blur-xl">
@@ -36,33 +55,59 @@ export function ActionQueue(p: Props) {
           Needs attention
         </div>
         <Link
-          href={tab === 'collect' ? '/invoicing' : tab === 'pay' ? '/settlement' : '/fulfilments'}
+          href={tab === 'collect' ? '/billing' : tab === 'pay' ? '/settlement' : '/billing'}
           className="text-[11px] font-medium text-primary hover:underline"
         >
           View all →
         </Link>
       </header>
-      <div className="mb-3 flex gap-1 rounded-lg bg-muted/30 p-1">
-        <TabButton active={tab === 'collect'} onClick={() => setTab('collect')} label="Collect" count={p.collectCount} />
-        <TabButton active={tab === 'pay'}     onClick={() => setTab('pay')}     label="Pay"     count={p.payCount} />
-        <TabButton active={tab === 'fulfil'}  onClick={() => setTab('fulfil')}  label="Fulfil"  count={p.fulfilCount} />
+      <div
+        role="tablist"
+        aria-label="Action queue"
+        onKeyDown={onKey}
+        className="mb-3 flex gap-1 rounded-lg bg-muted/30 p-1"
+      >
+        <TabButton tabId="collect" active={tab === 'collect'} onClick={() => setTab('collect')} label="Collect" count={p.collectCount} tabRef={(el) => { tabRefs.current.collect = el; }} />
+        <TabButton tabId="pay"     active={tab === 'pay'}     onClick={() => setTab('pay')}     label="Pay"     count={p.payCount}     tabRef={(el) => { tabRefs.current.pay = el; }} />
+        <TabButton tabId="fulfil"  active={tab === 'fulfil'}  onClick={() => setTab('fulfil')}  label="Fulfil"  count={p.fulfilCount}  tabRef={(el) => { tabRefs.current.fulfil = el; }} />
       </div>
-      {tab === 'collect' && (p.collect.length > 0
-        ? <ul>{p.collect.map((c) => <CollectRow key={c.invoice.id} item={c} />)}</ul>
-        : <EmptyState text="Nothing to collect — clear." />)}
-      {tab === 'pay' && (p.pay.length > 0
-        ? <ul>{p.pay.map((i) => <PayRow key={i.payout.id} item={i} />)}</ul>
-        : <EmptyState text="Nothing to pay — clear." />)}
-      {tab === 'fulfil' && (p.fulfil.length > 0
-        ? <ul>{p.fulfil.map((i) => <FulfilRow key={i.requirement.id} item={i} />)}</ul>
-        : <EmptyState text="Nothing to fulfil — clear." />)}
+      <div role="tabpanel" id="aq-panel-collect" aria-labelledby="aq-tab-collect" hidden={tab !== 'collect'}>
+        {p.collect.length > 0
+          ? <ul>{p.collect.map((c) => <CollectRow key={c.invoice.id} item={c} />)}</ul>
+          : <EmptyState text="Nothing to collect — clear." />}
+      </div>
+      <div role="tabpanel" id="aq-panel-pay" aria-labelledby="aq-tab-pay" hidden={tab !== 'pay'}>
+        {p.pay.length > 0
+          ? <ul>{p.pay.map((i) => <PayRow key={i.payout.id} item={i} />)}</ul>
+          : <EmptyState text="Nothing to pay — clear." />}
+      </div>
+      <div role="tabpanel" id="aq-panel-fulfil" aria-labelledby="aq-tab-fulfil" hidden={tab !== 'fulfil'}>
+        {p.fulfil.length > 0
+          ? <ul>{p.fulfil.map((i) => <FulfilRow key={i.requirement.id} item={i} />)}</ul>
+          : <EmptyState text="Nothing to fulfil — clear." />}
+      </div>
     </section>
   );
 }
 
-function TabButton({ active, onClick, label, count }: { active: boolean; onClick: () => void; label: string; count: number }) {
+interface TabButtonProps {
+  tabId: Tab;
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  count: number;
+  tabRef: (el: HTMLButtonElement | null) => void;
+}
+
+function TabButton({ tabId, active, onClick, label, count, tabRef }: TabButtonProps) {
   return (
     <button
+      ref={tabRef}
+      role="tab"
+      id={`aq-tab-${tabId}`}
+      aria-selected={active}
+      aria-controls={`aq-panel-${tabId}`}
+      tabIndex={active ? 0 : -1}
       onClick={onClick}
       className={cn(
         'flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-1.5 text-[12px] font-semibold transition-colors',
@@ -103,7 +148,7 @@ function CollectRow({ item }: { item: CollectItem }) {
         </div>
       </div>
       <div className={cn('font-semibold tabular-nums', amountClass)}>{formatINR(item.amountDue)}</div>
-      <Link href="/invoicing" className="text-[12px] font-medium text-primary hover:underline inline-flex items-center gap-1">
+      <Link href="/billing" className="text-[12px] font-medium text-primary hover:underline inline-flex items-center gap-1">
         Record <ArrowRight className="h-3 w-3" />
       </Link>
     </li>
@@ -135,7 +180,7 @@ function FulfilRow({ item }: { item: FulfilItem }) {
         </div>
       </div>
       <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{item.requirement.fulfilment_status}</div>
-      <Link href="/fulfilments" className="text-[12px] font-medium text-primary hover:underline inline-flex items-center gap-1">
+      <Link href="/billing" className="text-[12px] font-medium text-primary hover:underline inline-flex items-center gap-1">
         Open <ArrowRight className="h-3 w-3" />
       </Link>
     </li>

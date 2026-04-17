@@ -28,6 +28,8 @@ export function KpiTile({
       </div>
       <div className="mt-1 text-2xl font-bold tracking-tight tabular-nums">{value}</div>
       {deltaPct != null && (
+        // ±0.5% dead-zone keeps noisy sub-1% deltas muted so the up/down
+        // colors only fire on changes that actually matter to the operator.
         <div
           className={cn(
             'mt-0.5 inline-flex items-center gap-1 text-[11px] font-semibold',

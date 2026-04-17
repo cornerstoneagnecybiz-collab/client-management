@@ -7,14 +7,24 @@ function formatINR(n: number): string {
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
 }
 
-export function PendingPayouts({ items }: { items: PayItem[] }) {
-  const total = items.reduce((s, i) => s + i.payout.amount, 0);
+interface Props {
+  /** Top-N payout rows to display (already sorted). */
+  items: PayItem[];
+  /** Total number of pending payouts across all vendors (may exceed items.length). */
+  totalCount: number;
+  /** Sum of INR across ALL pending payouts (not just the visible rows). */
+  totalAmount: number;
+}
+
+export function PendingPayouts({ items, totalCount, totalAmount }: Props) {
+  const showingSubset = items.length < totalCount;
   return (
     <section className="rounded-2xl border border-border bg-card/60 p-5 backdrop-blur-xl">
       <header className="mb-3 flex items-center justify-between">
         <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Pending payouts</div>
         <span className="text-[11px] text-muted-foreground/70 tabular-nums">
-          {formatINR(total)} / {items.length} vendor{items.length !== 1 ? 's' : ''}
+          {formatINR(totalAmount)} across {totalCount} vendor{totalCount !== 1 ? 's' : ''}
+          {showingSubset && ` · top ${items.length}`}
         </span>
       </header>
       {items.length === 0 ? (

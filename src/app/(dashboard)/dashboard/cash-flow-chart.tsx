@@ -39,7 +39,14 @@ export function CashFlowChart({ weeks, legendRight }: Props) {
           No cash movement yet — record a payment or payout to see the trend.
         </div>
       ) : (
-        <svg viewBox={`0 0 ${W} ${H}`} className="h-[220px] w-full" preserveAspectRatio="none">
+        <svg
+          role="img"
+          aria-label="Weekly cash flow for the last 13 weeks, with money in, money out, and profit"
+          viewBox={`0 0 ${W} ${H}`}
+          className="h-[220px] w-full"
+          preserveAspectRatio="none"
+        >
+          <title>Weekly cash flow — last 13 weeks</title>
           <line x1="0" y1={H * 0.85} x2={W} y2={H * 0.85} stroke="rgba(255,255,255,0.08)" strokeDasharray="2 4" />
           {weeks.map((w, i) => {
             const x0 = i * groupW + groupW * 0.15;
