@@ -132,8 +132,8 @@ export function ActivityView({
                   const href =
                     e.type === 'client_invoice' || e.type === 'client_payment'
                       ? e.reference_id
-                        ? `/invoicing?id=${e.reference_id}`
-                        : `/invoicing`
+                        ? `/billing?id=${e.reference_id}`
+                        : `/billing`
                       : e.type === 'vendor_payment' && e.reference_id
                         ? `/settlement${e.reference_id}`
                         : null;

@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { ClientTabs } from './client-tabs';
 import { Breadcrumbs } from '@/components/breadcrumbs';
-import type { InvoiceRow } from '@/app/(dashboard)/invoicing/page';
+import type { InvoiceRow } from '@/app/(dashboard)/invoicing/types';
 import type { ActivityEntryRow } from '@/app/(dashboard)/activity/page';
 import type { LedgerEntryType } from '@/types';
 import { projectNameFromRelation } from '@/lib/utils';

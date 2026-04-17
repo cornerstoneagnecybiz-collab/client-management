@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Check } from 'lucide-react';
 import { ModalBody, ModalFooter } from '@/components/ui/modal';
 import { FormError } from '@/components/ui/form-shell';
 import { useToast } from '@/components/ui/toast';
@@ -14,10 +15,10 @@ import { cn } from '@/lib/utils';
 
 const PRICING_OPTIONS: { value: PricingType; label: string; hint: string }[] = [
   { value: 'fixed', label: 'Fixed price', hint: 'Enter total client price and vendor cost directly.' },
-  { value: 'qty_rate', label: 'Qty × Rate', hint: 'Quantity × unit rate = client price.' },
-  { value: 'days_rate', label: 'Days × Daily rate', hint: 'Number of days × daily rate = client price.' },
-  { value: 'qty_days_rate', label: 'Qty × Days × Rate', hint: 'People × days × daily rate = client price.' },
-  { value: 'custom', label: 'Custom', hint: 'Enter totals manually — no formula applied.' },
+  { value: 'qty_rate', label: 'Qty x Rate', hint: 'Quantity x unit rate = client price.' },
+  { value: 'days_rate', label: 'Days x Daily rate', hint: 'Number of days x daily rate = client price.' },
+  { value: 'qty_days_rate', label: 'Qty x Days x Rate', hint: 'People x days x daily rate = client price.' },
+  { value: 'custom', label: 'Custom', hint: 'Enter totals manually - no formula applied.' },
 ];
 
 const COMPUTED_TYPES: PricingType[] = ['qty_rate', 'days_rate', 'qty_days_rate'];
@@ -219,7 +220,7 @@ export function NewRequirementForm({
           return (
             <div key={s} className="flex items-center gap-1">
               <div className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${step === s ? 'bg-primary text-primary-foreground' : step > s ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'}`}>
-                {step > s ? '✓' : s}
+                {step > s ? <Check className="h-3 w-3" /> : s}
               </div>
               <span className={`text-xs ${step === s ? 'font-medium' : 'text-muted-foreground'}`}>{label}</span>
               {s < 3 && <div className="mx-1 h-px w-6 bg-border" />}

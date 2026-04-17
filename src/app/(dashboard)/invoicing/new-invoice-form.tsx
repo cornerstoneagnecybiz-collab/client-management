@@ -28,6 +28,18 @@ interface NewInvoiceFormProps {
   onSuccess: () => void;
   onCancel: () => void;
   onDirtyChange?: (dirty: boolean) => void;
+  /**
+   * When set, the form is in "bulk from selected" mode: the project is locked, the amount is
+   * prefilled from the selection, and only the selected requirements are attached to the new
+   * invoice. Used by the Billing page.
+   */
+  preselectedRequirementIds?: string[];
+  /** Preselected invoice amount (sum of client prices of selected requirements). */
+  preselectedAmount?: number;
+  /** Preselected invoice type (from the project's engagement_type). */
+  preselectedType?: InvoiceType;
+  /** Preselected billing month (YYYY-MM) — for monthly retainers. */
+  preselectedBillingMonth?: string;
 }
 
 export function NewInvoiceForm({
@@ -36,30 +48,37 @@ export function NewInvoiceForm({
   onSuccess,
   onCancel,
   onDirtyChange,
+  preselectedRequirementIds,
+  preselectedAmount,
+  preselectedType,
+  preselectedBillingMonth,
 }: NewInvoiceFormProps) {
   const toast = useToast();
+  const hasPreselection = !!preselectedRequirementIds && preselectedRequirementIds.length > 0;
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [projectId, setProjectId] = useState(defaultProjectId);
-  const [type, setType] = useState<InvoiceType>('project');
-  const [amount, setAmount] = useState('');
+  const [type, setType] = useState<InvoiceType>(preselectedType ?? 'project');
+  const [amount, setAmount] = useState(preselectedAmount != null ? String(preselectedAmount) : '');
   const [issueDate, setIssueDate] = useState('');
   const [dueDate, setDueDate] = useState('');
-  const [billingMonth, setBillingMonth] = useState('');
+  const [billingMonth, setBillingMonth] = useState(preselectedBillingMonth ?? '');
 
   useEffect(() => {
     if (!projectId) return;
+    if (preselectedType) return;
     const project = projectOptions.find((p) => p.value === projectId);
     if (project?.engagement_type === 'monthly') setType('monthly');
     else if (project?.engagement_type === 'one_time') setType('project');
-  }, [projectId, projectOptions]);
+  }, [projectId, projectOptions, preselectedType]);
 
   useEffect(() => {
     if (!projectId) return;
+    if (hasPreselection) return;
     getSuggestedInvoiceAmount(projectId).then(({ amount }) => {
       if (amount > 0) setAmount(String(amount));
     });
-  }, [projectId]);
+  }, [projectId, hasPreselection]);
 
   const isDirty =
     (!defaultProjectId && projectId.length > 0) ||
@@ -95,6 +114,7 @@ export function NewInvoiceForm({
       issue_date: issueDate.trim() || null,
       due_date: dueDate.trim() || null,
       billing_month: type === 'monthly' && billingMonth ? `${billingMonth}-01` : null,
+      requirement_ids: hasPreselection ? preselectedRequirementIds : undefined,
     });
     setLoading(false);
     if (result.error) {
@@ -116,13 +136,20 @@ export function NewInvoiceForm({
     <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
       <ModalBody>
         <FormSection>
+          {hasPreselection && (
+            <p className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-sm text-foreground">
+              {preselectedRequirementIds!.length} requirement{preselectedRequirementIds!.length !== 1 ? 's' : ''} attached to this invoice.
+            </p>
+          )}
           <Field label="Project" required error={errors.projectId}>
             <Select.Root
               value={projectId || undefined}
               onValueChange={(v) => {
+                if (hasPreselection) return;
                 setProjectId(v);
                 setErrors((p) => { const n = { ...p }; delete n.projectId; return n; });
               }}
+              disabled={hasPreselection}
               required
             >
               <Select.Trigger

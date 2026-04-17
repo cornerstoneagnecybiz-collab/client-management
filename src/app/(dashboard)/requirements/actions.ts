@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { logAudit } from '@/lib/audit';
+import { sanitizeText } from '@/lib/text';
 import type { FulfilmentStatus } from '@/types';
 import type { DeliveryType, PricingType } from '@/types/database';
 
@@ -69,11 +70,11 @@ export async function createRequirement(input: {
     .from('requirements')
     .insert({
       project_id: input.project_id,
-      service_name: input.service_name.trim(),
-      service_category: input.service_category?.trim() || null,
+      service_name: sanitizeText(input.service_name).trim(),
+      service_category: sanitizeText(input.service_category)?.trim() || null,
       pricing_type: pricingType,
-      title: input.title.trim(),
-      description: input.description?.trim() || null,
+      title: sanitizeText(input.title).trim(),
+      description: sanitizeText(input.description)?.trim() || null,
       delivery,
       client_price,
       expected_vendor_cost,
@@ -129,6 +130,10 @@ export async function updateRequirement(
     .single();
 
   const payload = { ...updates } as Record<string, unknown>;
+  if ('service_name' in updates) payload.service_name = sanitizeText(updates.service_name ?? '');
+  if ('service_category' in updates) payload.service_category = sanitizeText(updates.service_category);
+  if ('title' in updates) payload.title = sanitizeText(updates.title ?? '');
+  if ('description' in updates) payload.description = sanitizeText(updates.description);
   if (updates.delivery === 'in_house') payload.assigned_vendor_id = null;
 
   const pricingType = (updates.pricing_type ?? before?.pricing_type ?? 'fixed') as PricingType;

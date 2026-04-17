@@ -219,11 +219,14 @@ export async function getSuggestedInvoiceAmount(project_id: string): Promise<{ a
   if (reqError) return { amount: 0, error: reqError.message };
   if (!fulfilled?.length) return { amount: 0 };
 
+  // Exclude requirements already attached to any non-cancelled one-time invoice (incl. drafts
+  // created via Billing "Create invoice from selected"). Monthly invoices don't line-item
+  // per requirement the same way, so we only look at project/milestone invoices.
   const { data: projectInvoices } = await supabase
     .from('invoices')
-    .select('id, type')
+    .select('id, type, status')
     .eq('project_id', project_id)
-    .in('status', ['issued', 'paid']);
+    .neq('status', 'cancelled');
   const oneTimeInvoiceIds = (projectInvoices ?? [])
     .filter((i) => (i.type as string) === 'project' || (i.type as string) === 'milestone')
     .map((i) => i.id);
@@ -250,6 +253,13 @@ export async function createInvoice(input: {
   issue_date?: string | null;
   due_date?: string | null;
   billing_month?: string | null;
+  /**
+   * Explicit list of requirement ids to attach to this invoice. When provided, only these
+   * requirements are linked (used by Billing "Create invoice from selected"). When omitted,
+   * the default "snapshot all fulfilled for this project on issue" behavior in updateInvoice
+   * kicks in at issue time.
+   */
+  requirement_ids?: string[];
 }): Promise<{ id?: string; error?: string }> {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -267,6 +277,13 @@ export async function createInvoice(input: {
     .single();
 
   if (error) return { error: error.message };
+
+  if (input.requirement_ids && input.requirement_ids.length > 0) {
+    const links = input.requirement_ids.map((rid) => ({ invoice_id: data.id, requirement_id: rid }));
+    const { error: linkError } = await supabase.from('invoice_requirements').insert(links);
+    if (linkError) return { id: data.id, error: linkError.message };
+  }
+
   return { id: data.id };
 }
 
@@ -308,17 +325,25 @@ export async function updateInvoice(
       date,
       reference_id: id,
     });
-    // Snapshot fulfilled requirements for this project so "Suggest from fulfilled" excludes them
-    await supabase.from('invoice_requirements').delete().eq('invoice_id', id);
-    const { data: fulfilled } = await supabase
-      .from('requirements')
-      .select('id')
-      .eq('project_id', existing.project_id)
-      .eq('fulfilment_status', 'fulfilled');
-    if (fulfilled?.length) {
-      await supabase.from('invoice_requirements').insert(
-        fulfilled.map((r) => ({ invoice_id: id, requirement_id: r.id }))
-      );
+    // Snapshot fulfilled requirements for this project so "Suggest from fulfilled" excludes them,
+    // but only if the invoice doesn't already carry an explicit requirement list (e.g. built via
+    // Billing "Create invoice from selected").
+    const { data: existingLinks } = await supabase
+      .from('invoice_requirements')
+      .select('requirement_id')
+      .eq('invoice_id', id)
+      .limit(1);
+    if (!existingLinks || existingLinks.length === 0) {
+      const { data: fulfilled } = await supabase
+        .from('requirements')
+        .select('id')
+        .eq('project_id', existing.project_id)
+        .eq('fulfilment_status', 'fulfilled');
+      if (fulfilled?.length) {
+        await supabase.from('invoice_requirements').insert(
+          fulfilled.map((r) => ({ invoice_id: id, requirement_id: r.id }))
+        );
+      }
     }
     await logAudit('invoice_issued', 'invoice', id, { project_id: existing.project_id, amount });
   }

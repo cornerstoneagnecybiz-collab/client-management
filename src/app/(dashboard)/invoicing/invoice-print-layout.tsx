@@ -79,7 +79,7 @@ export function InvoicePrintLayout({
       <div className="sticky top-0 z-50 flex items-center justify-between border-b border-border bg-muted/30 px-4 py-3 print:hidden">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" asChild>
-            <Link href="/invoicing">
+            <Link href="/billing">
               <ArrowLeft className="h-4 w-4" />
               Back to Finance
             </Link>

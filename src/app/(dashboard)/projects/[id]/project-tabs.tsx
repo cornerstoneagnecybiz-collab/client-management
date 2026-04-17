@@ -23,7 +23,7 @@ import { ProjectLedgerTab } from './project-ledger-tab';
 import { ProjectActivityTab, type ActivityItem } from './project-activity-tab';
 import { ProjectNotesTab } from './project-notes-tab';
 import { ProjectDocumentsTab } from './project-documents-tab';
-import type { InvoiceRow } from '@/app/(dashboard)/invoicing/page';
+import type { InvoiceRow } from '@/app/(dashboard)/invoicing/types';
 import type { PaymentRow } from '@/app/(dashboard)/invoicing/invoice-detail-panel';
 import type { LedgerEntryRow } from '@/app/(dashboard)/ledger/page';
 import type { ProjectNote } from '@/types/database';

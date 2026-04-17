@@ -161,7 +161,7 @@ export function RequirementDetailPanel({
             {invoicedIn.map((inv, i) => (
               <span key={inv.id}>
                 {i > 0 && ', '}
-                <Link href={`/invoicing?id=${inv.id}`} className="font-medium text-primary hover:underline">
+                <Link href={`/billing?id=${inv.id}`} className="font-medium text-primary hover:underline">
                   {inv.invoice_number}
                 </Link>
               </span>
@@ -171,7 +171,7 @@ export function RequirementDetailPanel({
         {status === 'fulfilled' && (
           <p className="mt-2">
             <Button asChild size="sm" variant="outline">
-              <Link href={`/invoicing?project=${requirement.project_id}&new=1`}>Add to invoice</Link>
+              <Link href={`/billing?project=${requirement.project_id}&new=1`}>Add to invoice</Link>
             </Button>
           </p>
         )}

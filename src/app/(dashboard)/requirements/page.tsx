@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
 import { RequirementsView } from './requirements-view';
-import { NextStepBanner } from '@/components/next-step-banner';
 import { projectNameFromRelation, relationNameFromRelation } from '@/lib/utils';
 
 export type RequirementRow = {
@@ -110,18 +109,6 @@ export default async function RequirementsPage({
     created_at: r.created_at,
   }));
 
-  // Count fulfilled requirements not yet on any issued/paid invoice (for next-step banner)
-  const fulfilledNotInvoiced = requirements.filter((r) => r.fulfilment_status === 'fulfilled');
-  let uninvoicedFulfilledCount = 0;
-  if (fulfilledNotInvoiced.length > 0) {
-    const { data: invoicedLinks } = await supabase
-      .from('invoice_requirements')
-      .select('requirement_id')
-      .in('requirement_id', fulfilledNotInvoiced.map((r) => r.id));
-    const invoicedIds = new Set((invoicedLinks ?? []).map((l) => l.requirement_id));
-    uninvoicedFulfilledCount = fulfilledNotInvoiced.filter((r) => !invoicedIds.has(r.id)).length;
-  }
-
   const { data: projects } = await supabase.from('projects').select('id, name, engagement_type').order('name');
   const { data: vendors } = await supabase.from('vendors').select('id, name').order('name');
 
@@ -138,13 +125,6 @@ export default async function RequirementsPage({
 
   return (
     <div className="space-y-4">
-      {uninvoicedFulfilledCount > 0 && !projectFilter && (
-        <NextStepBanner
-          message={`${uninvoicedFulfilledCount} fulfilled requirement${uninvoicedFulfilledCount !== 1 ? 's' : ''} not yet invoiced.`}
-          ctaLabel="Create invoice"
-          href="/invoicing?new=1"
-        />
-      )}
       <RequirementsView
         initialRequirements={requirements}
         initialOpenId={openId ?? null}

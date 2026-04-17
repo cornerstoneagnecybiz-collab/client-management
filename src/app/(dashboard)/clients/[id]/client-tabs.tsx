@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { updateClient } from '../actions';
-import type { InvoiceRow } from '@/app/(dashboard)/invoicing/page';
+import type { InvoiceRow } from '@/app/(dashboard)/invoicing/types';
 import type { ActivityEntryRow } from '@/app/(dashboard)/activity/page';
 import type { InvoiceStatus, InvoiceType } from '@/types';
 
@@ -205,7 +205,7 @@ export function ClientTabs({
                     <td className="content-cell px-4">{STATUS_LABELS[inv.status]}</td>
                     <td className="content-cell px-2">
                       <Button variant="ghost" size="icon" asChild>
-                        <Link href={`/invoicing?id=${inv.id}`} aria-label={`Open invoice`}>
+                        <Link href={`/billing?id=${inv.id}`} aria-label={`Open invoice`}>
                           <ChevronRight className="h-4 w-4" />
                         </Link>
                       </Button>
@@ -217,7 +217,7 @@ export function ClientTabs({
           )}
           <div className="border-t border-border px-4 py-3">
             <Button asChild size="sm" variant="outline">
-              <Link href="/invoicing">Open Finance</Link>
+              <Link href="/billing">Open Finance</Link>
             </Button>
           </div>
         </div>
@@ -247,8 +247,8 @@ export function ClientTabs({
                       const Icon = variant.icon;
                       const href =
                         (e.type === 'client_invoice' || e.type === 'client_payment') && e.reference_id
-                          ? `/invoicing?id=${e.reference_id}`
-                          : e.type === 'vendor_payment' ? '/invoicing' : null;
+                          ? `/billing?id=${e.reference_id}`
+                          : e.type === 'vendor_payment' ? '/settlement' : null;
                       return (
                         <li key={e.id}>
                           <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-card px-4 py-3">

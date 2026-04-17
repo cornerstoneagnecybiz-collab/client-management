@@ -82,11 +82,11 @@ export function CommandPaletteTrigger() {
               Add requirement
             </Command.Item>
             <Command.Item
-              onSelect={() => { router.push('/invoicing'); setOpen(false); }}
+              onSelect={() => { router.push('/billing'); setOpen(false); }}
               className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm data-[selected=true]:bg-muted"
             >
               <FileText className="h-4 w-4" />
-              Invoicing
+              Billing
             </Command.Item>
             <Command.Item
               onSelect={() => { router.push('/settlement'); setOpen(false); }}

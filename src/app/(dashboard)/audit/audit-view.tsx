@@ -93,8 +93,8 @@ export function AuditView({
             <tbody>
               {entries.map((e) => {
                 const href =
-                  e.entity_type === 'invoice' ? `/invoicing?id=${e.entity_id}` :
-                  e.entity_type === 'payment_received' && e.meta?.invoice_id ? `/invoicing?id=${e.meta.invoice_id}` :
+                  e.entity_type === 'invoice' ? `/billing?id=${e.entity_id}` :
+                  e.entity_type === 'payment_received' && e.meta?.invoice_id ? `/billing?id=${e.meta.invoice_id}` :
                   e.entity_type === 'vendor_payout' ? `/settlement${e.entity_id}` :
                   e.entity_type === 'requirement' ? `/requirements?id=${e.entity_id}` : null;
                 const details: string[] = [];

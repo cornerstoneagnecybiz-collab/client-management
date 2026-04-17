@@ -5,7 +5,7 @@ import { ProjectTabs } from './project-tabs';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { plannedProfit } from '@/types';
 import type { ProjectStatus } from '@/types';
-import type { InvoiceRow, PaymentRow } from '@/app/(dashboard)/invoicing/page';
+import type { InvoiceRow, PaymentRow } from '@/app/(dashboard)/invoicing/types';
 import type { LedgerEntryRow } from '@/app/(dashboard)/ledger/page';
 import type { ActivityItem } from './project-activity-tab';
 import { projectNameFromRelation, relationNameFromRelation } from '@/lib/utils';
@@ -173,7 +173,7 @@ export default async function ProjectDetailPage({
       date: inv.created_at,
       type: 'invoice_created',
       label: `Invoice created (${inv.status}): ${inv.type}`,
-      href: `/invoicing?id=${inv.id}`,
+      href: `/billing?id=${inv.id}`,
       amount: inv.amount,
     });
     if (inv.status === 'issued' && inv.issue_date) {
@@ -182,7 +182,7 @@ export default async function ProjectDetailPage({
         date: inv.issue_date,
         type: 'invoice_issued',
         label: `Invoice issued: ${inv.type}`,
-        href: `/invoicing?id=${inv.id}`,
+        href: `/billing?id=${inv.id}`,
         amount: inv.amount,
       });
     }
@@ -195,7 +195,7 @@ export default async function ProjectDetailPage({
         date: p.date,
         type: 'payment_received',
         label: 'Payment received',
-        href: `/invoicing?id=${inv.id}`,
+        href: `/billing?id=${inv.id}`,
         amount: p.amount,
       });
     }
@@ -206,7 +206,7 @@ export default async function ProjectDetailPage({
       date: po.created_at,
       type: 'payout_recorded',
       label: 'Vendor payout recorded',
-      href: '/invoicing',
+      href: '/billing',
       amount: po.amount,
     });
     if (po.paid_date) {
@@ -215,7 +215,7 @@ export default async function ProjectDetailPage({
         date: po.paid_date,
         type: 'payout_paid',
         label: 'Vendor payout paid',
-        href: '/invoicing',
+        href: '/billing',
         amount: po.amount,
       });
     }

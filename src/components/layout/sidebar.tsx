@@ -6,7 +6,6 @@ import {
   LayoutDashboard,
   FolderKanban,
   ClipboardList,
-  ListChecks,
   Truck,
   Users,
   Wallet,
@@ -23,10 +22,9 @@ const flowSteps = [
   { href: '/vendors', label: 'Vendors', icon: Truck, step: 2 },
   { href: '/projects', label: 'Projects', icon: FolderKanban, step: 3 },
   { href: '/requirements', label: 'Requirements', icon: ClipboardList, step: 4 },
-  { href: '/fulfilments', label: 'Fulfilments', icon: ListChecks, step: 5 },
-  { href: '/invoicing', label: 'Invoicing', icon: Wallet, step: 6 },
-  { href: '/settlement', label: 'Settlement', icon: Handshake, step: 7 },
-  { href: '/reports', label: 'Reports', icon: BarChart3, step: 8 },
+  { href: '/billing', label: 'Billing', icon: Wallet, step: 5 },
+  { href: '/settlement', label: 'Settlement', icon: Handshake, step: 6 },
+  { href: '/reports', label: 'Reports', icon: BarChart3, step: 7 },
 ];
 
 const secondaryNav = [
